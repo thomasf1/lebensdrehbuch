@@ -23,6 +23,8 @@ import { ChatSDKError } from '@/lib/errors';
 import type { Attachment, ChatMessage } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
 
+import { guidedTopics } from '@/lib/guided-topics';
+
 export function Chat({
   id,
   initialMessages,
@@ -49,6 +51,11 @@ export function Chat({
   const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState<string>('');
+
+  const [currentTopic, setCurrentTopic] = useState<any>(null);
+  const [currentSubtopic, setCurrentSubtopic] = useState<any>(null);
+  const [subtopicAnswers, setSubtopicAnswers] = useState<any>([]);
+  const [lastQuestionId, setlastQuestionId] = useState<string>('');
 
   const {
     messages,
@@ -93,6 +100,45 @@ export function Chat({
       }
     },
   });
+
+  const sendGuidedMessage = (topicId: string, subtopicId: string | null) => {
+    //message: ChatMessage
+    
+
+    console.log('startGuidedFlow', topicId, subtopicId);
+    const flowTopic = guidedTopics[topicId];
+      if (!flowTopic) {
+        throw new Error(`Topic with id ${topicId} not found`);
+      }
+
+      let flowSubtopic = Object.values(flowTopic.subtopics)[0];
+      if (subtopicId && flowTopic.subtopics[subtopicId]) {
+        flowSubtopic = flowTopic.subtopics[subtopicId];
+      }
+
+      setCurrentTopic(flowTopic);
+      setCurrentSubtopic(flowSubtopic);
+
+      const firstQuestion = Object.values(flowSubtopic.questions)[0];
+      const firstQuestionId = Object.keys(flowSubtopic.questions)[0];
+      setlastQuestionId(firstQuestionId);
+
+      const agentMessageId = generateUUID();
+      const agentMessage: ChatMessage = {
+        id: agentMessageId,
+        role: 'assistant' as const,
+        content: firstQuestion,
+        parts: [{ type: 'text' as const, text: firstQuestion }],
+        createdAt: new Date(),
+        metadata: {
+          topicId: flowTopic.id,
+          subtopicId: flowSubtopic.id,
+          questionId: firstQuestionId,
+        },
+      };
+
+      sendMessage(agentMessage);
+  };
 
   const searchParams = useSearchParams();
   const query = searchParams.get('query');

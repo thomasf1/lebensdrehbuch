@@ -222,6 +222,7 @@ export async function POST(request: Request) {
       return new Response(stream);
     }
   } catch (error) {
+    console.log('error', error);
     if (error instanceof ChatSDKError) {
       return error.toResponse();
     }

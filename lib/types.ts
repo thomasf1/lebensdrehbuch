@@ -12,6 +12,9 @@ export type DataPart = { type: 'append-message'; message: string };
 
 export const messageMetadataSchema = z.object({
   createdAt: z.string(),
+  topicId: z.string(),
+  subtopicId: z.string(),
+  questionId: z.string(),
 });
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;

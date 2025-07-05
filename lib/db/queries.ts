@@ -184,7 +184,7 @@ export async function getChatsByUserId({
     } else {
       filteredChats = await query();
     }
-
+    console.log('filteredChats', filteredChats);
     const hasMore = filteredChats.length > limit;
 
     return {
