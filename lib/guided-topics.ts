@@ -1,9 +1,7 @@
 // Guided interview topics and questions for the chat interview flow
 // German guided interview structure with topics, subtopics, and questions
 export interface GuidedQuestion {
-  q1: string;
-  q2: string;
-  q3: string;
+  [key: string]: string;
 }
 
 export interface GuidedSubtopic {

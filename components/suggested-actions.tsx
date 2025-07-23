@@ -12,14 +12,14 @@ interface SuggestedActionsProps {
   chatId: string;
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
   selectedVisibilityType: VisibilityType;
-  startGuidedFlow: (topicId: string, subtopicId: string | null) => void;
+  sendGuidedMessage: (topicId: string, subtopicId: string | null) => void;
 }
 
 function PureSuggestedActions({
   chatId,
   sendMessage,
   selectedVisibilityType,
-  startGuidedFlow,
+  sendGuidedMessage,
 }: SuggestedActionsProps) {
   const topics = Object.values(guidedTopics)
     .slice(2, 6);
@@ -44,7 +44,7 @@ function PureSuggestedActions({
             <Button
               type="button"
               variant="ghost"
-              onClick={() => startGuidedFlow(topic.id, firstSubtopic.id)}
+              onClick={() => sendGuidedMessage(topic.id, firstSubtopic.id)}
               className="text-left border rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start"
             >
               <span className="font-medium">{topic.title}</span>

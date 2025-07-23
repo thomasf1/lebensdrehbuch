@@ -40,6 +40,7 @@ function PureMultimodalInput({
   messages,
   setMessages,
   sendMessage,
+  sendGuidedMessage,
   className,
   selectedVisibilityType,
 }: {
@@ -53,6 +54,7 @@ function PureMultimodalInput({
   messages: Array<UIMessage>;
   setMessages: UseChatHelpers<ChatMessage>['setMessages'];
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
+  sendGuidedMessage: (topicId: string, subtopicId: string | null) => void;
   className?: string;
   selectedVisibilityType: VisibilityType;
 }) {
@@ -241,6 +243,7 @@ function PureMultimodalInput({
             sendMessage={sendMessage}
             chatId={chatId}
             selectedVisibilityType={selectedVisibilityType}
+            sendGuidedMessage={sendGuidedMessage}
           />
         )}
 
@@ -279,7 +282,7 @@ function PureMultimodalInput({
       <Textarea
         data-testid="multimodal-input"
         ref={textareaRef}
-        placeholder="Send a message..."
+        placeholder="Nachricht..."
         value={input}
         onChange={handleInput}
         className={cx(
@@ -297,6 +300,7 @@ function PureMultimodalInput({
             event.preventDefault();
 
             if (status !== 'ready') {
+              console.log('status', status)
               toast.error('Please wait for the model to finish its response!');
             } else {
               submitForm();
@@ -305,9 +309,7 @@ function PureMultimodalInput({
         }}
       />
 
-      <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
-        <AttachmentsButton fileInputRef={fileInputRef} status={status} />
-      </div>
+      
 
       <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
         {status === 'submitted' ? (

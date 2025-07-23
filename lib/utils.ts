@@ -98,12 +98,16 @@ export function sanitizeText(text: string) {
 }
 
 export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
+  console.log('convertToUIMessages', messages);
   return messages.map((message) => ({
     id: message.id,
     role: message.role as 'user' | 'assistant' | 'system',
     parts: message.parts as UIMessagePart<CustomUIDataTypes, ChatTools>[],
     metadata: {
       createdAt: formatISO(message.createdAt),
+      topicId: message.metadata?.topicId,
+      subtopicId: message.metadata?.subtopicId,
+      questionId: message.metadata?.questionId,
     },
   }));
 }

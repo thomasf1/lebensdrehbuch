@@ -38,7 +38,24 @@ import type { ChatMessage } from '@/lib/types';
 import type { ChatModel } from '@/lib/ai/models';
 import type { VisibilityType } from '@/components/visibility-selector';
 
+import { guidedTopics } from '@/lib/guided-topics';
+
 export const maxDuration = 60;
+
+
+function getMessageTextPart (message: ChatMessage, failOnNotFound: boolean = false) {
+  for (let i = 0; i < message.parts.length; i++) {
+    if (message.parts[i].type === 'text') {
+      return message.parts[i]
+    }
+  }
+  console.log('no messagePart found', JSON.stringify(message))
+  if (failOnNotFound) {
+    //console.log('getMessageTextPart - failOnNotFound', failOnNotFound)
+    throw Error('no messagePart found')
+  }
+  return false
+}
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
@@ -62,13 +79,82 @@ export function getStreamContext() {
   return globalStreamContext;
 }
 
+// needs topic, subtopic, questionid, userAnswers -> filter questions, 
+function generatePrompt (currentMessage: string, topicId: string, subtopicId: string, question: string, questionId: string | undefined | null, userAnswers: any
+) {
+  const topic = guidedTopics[topicId];
+  const subtopic = topic.subtopics[subtopicId];
+  console.log('userAnswers-0', userAnswers);
+  if (!userAnswers) {
+    userAnswers = [];
+  }
+  //const question = subtopic.questions[questionId] || null;
+  userAnswers.push({
+    qid: questionId || null,
+    question: subtopic.questions[questionId] || question || null,
+    answer: currentMessage,
+  });
+  console.log('userAnswers-1', userAnswers);
+    // filter out qid from userAnswers of subtopic.questions
+    const answeredQids = new Set(userAnswers.map((qa: { qid: string }) => qa.qid));
+    console.log('answeredQids', answeredQids);
+    // Get all question IDs, filter out the answered ones, then map to their text
+    const unaskedQuestions = Object.entries(subtopic.questions)
+      .filter(([qid]) => !answeredQids.has(qid))
+      .map(([qid, question]) => {return {qid: qid, question: question}});
+    console.log('unaskedQuestions', unaskedQuestions);
+
+  let prompt = '';
+  const promptStart = `
+Du bist ein Coaching-Interview-Assistent.
+
+Das aktuelle Thema ist: "${topic.title}": "${subtopic.title}"
+
+Hier sind die bisherigen Antworten des Users:
+${userAnswers.map((qa: { question: string; answer: string }) => `Frage: ${qa.question}\nAntwort: ${qa.answer}`).join('\n')}
+`;
+
+  if (unaskedQuestions.length > 0) {
+    prompt = `${promptStart}
+Hier sind die noch nicht gestellten Leitfragen für das Subthema:
+${unaskedQuestions.map((q: { qid: string; question: string; }, i: number) => `qid ${q.qid}: ${q.question}`).join('\n')}
+
+Beurteile, ob die Antworten ausreichend und vollständig sind um die Frage "${subtopic.title}" zu beantworten.
+Wenn ja, antworte exakt mit:
+complete: <Detailierte zusammenfassung der Antworten>
+
+Wenn nein, dann entscheide:
+- Gibt es eine noch nicht gestellte Leitfrage die relevant ist? Dann antworte exakt mit:
+next: <qid>
+- Wenn die Leitfragen beantwortet sind, formuliere eine gezielte Rückfrage die die Antworten aufgreift, um Unklarheiten zu klären oder Details nachzufragen. Dann antworte exakt mit:
+clarify: <Rückfrage>
+`;
+  } else {
+    // too many questions -> next userAnswers
+    prompt = `${promptStart}
+Beurteile, ob die Antworten einigermassen ausreichend sind um die Frage "${subtopic.title}" zu beantworten.
+Wenn ja, antworte exakt mit:
+complete: <Zusammenfassung der Antworten>
+
+Wenn nein, dann entscheide:
+- Welche Fragen kannst du noch stellen die Frage "${subtopic.title}" abzuschließen? Dann antworte exakt mit:
+next: <qid>
+- Oder formuliere eine gezielte Rückfrage die die Antworten aufgreift, um Unklarheiten zu klären oder Details nachzufragen. Dann antworte exakt mit:
+clarify: <Rückfrage>
+`;
+  }
+
+  return prompt;
+}
+
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
   try {
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
+  } catch (error) {
+    console.log('bad_request:api', error);
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
@@ -78,13 +164,34 @@ export async function POST(request: Request) {
       message,
       selectedChatModel,
       selectedVisibilityType,
+      topicId,
+      subtopicId,
+      questionId,
+      question,
+      userAnswers,
     }: {
       id: string;
       message: ChatMessage;
       selectedChatModel: ChatModel['id'];
       selectedVisibilityType: VisibilityType;
+      topicId?: string;
+      subtopicId?: string;
+      questionId?: string | null;
+      question?: string | null;
+      userAnswers?: any;
     } = requestBody;
-
+    
+    console.log('****************************************************');
+    console.log('****************************************************');
+    console.log('****************************************************');
+    console.log('****************************************************');
+    console.log('*** POST', requestBody);
+    console.log('****************************************************');
+    const myTopicId = topicId || message.metadata?.topicId || '';
+    const mySubtopicId = subtopicId || message.metadata?.subtopicId || '';
+    const myQuestionId = questionId || message.metadata?.questionId || '';
+    const messagePart = getMessageTextPart(message)
+    console.log('question', question)
     const session = await auth();
 
     if (!session?.user) {
@@ -114,6 +221,7 @@ export async function POST(request: Request) {
         userId: session.user.id,
         title,
         visibility: selectedVisibilityType,
+        metadata: {},
       });
     } else {
       if (chat.userId !== session.user.id) {
@@ -121,8 +229,32 @@ export async function POST(request: Request) {
       }
     }
 
-    const messagesFromDb = await getMessagesByChatId({ id });
-    const uiMessages = [...convertToUIMessages(messagesFromDb), message];
+    // Assistant message only
+    if (message.role === 'assistant') {
+      let msg = {
+        chatId: id,
+        id: message.id,
+        role: 'assistant',
+        parts: message.parts,
+        attachments: [],
+        createdAt: new Date(),
+        metadata: {
+          topicId: myTopicId,
+          subtopicId: mySubtopicId,
+          questionId: myQuestionId,
+        },
+      }
+      await saveMessages({
+        messages: [
+          msg
+        ],
+      });
+      console.log('assistant message saved - 1', msg)
+      return new Response('');;
+    }
+
+    //const messagesFromDb = await getMessagesByChatId({ id });
+    
 
     const { longitude, latitude, city, country } = geolocation(request);
 
@@ -133,30 +265,62 @@ export async function POST(request: Request) {
       country,
     };
 
+    const metadata = {
+      topicId: myTopicId,
+      subtopicId: mySubtopicId,
+      questionId: myQuestionId,
+    };
+
+    let user_msg = {
+      chatId: id,
+      id: message.id,
+      role: 'user',
+      parts: message.parts,
+      attachments: [],
+      createdAt: new Date(),
+      metadata: metadata,
+    }
+    
     await saveMessages({
       messages: [
-        {
-          chatId: id,
-          id: message.id,
-          role: 'user',
-          parts: message.parts,
-          attachments: [],
-          createdAt: new Date(),
-        },
+        user_msg
       ],
     });
-
+    
+    console.log('user message saved - 2', user_msg)
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
-    console.log(JSON.stringify(uiMessages, null, 2));
+    //console.log('uiMessages', JSON.stringify(uiMessages, null, 2));
+
+    let prompt = null;
+    //let messages = [
+    //  msg
+    //];
+    
+    //let create = convertToModelMessages(uiMessages);
+    let prompt_messages = undefined;
+    console.log('myTopicId && mySubtopicId', myTopicId && mySubtopicId, myTopicId, mySubtopicId)
+    if (myTopicId && mySubtopicId) {
+      prompt = generatePrompt(messagePart.text || '', myTopicId, mySubtopicId, question || '', myQuestionId, userAnswers);
+    }
+    else {
+      const messagesFromDb = await getMessagesByChatId({ id });
+      const uiMessages = [...convertToUIMessages(messagesFromDb), user_msg];
+      let messages = convertToModelMessages(uiMessages);
+      prompt_messages = messages;
+    }
+    
+    //console.log('createUIMessageStream - messages', messages)
+    console.log('createUIMessageStream - prompt', prompt)
 
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel, requestHints }),
-          messages: convertToModelMessages(uiMessages),
+          messages: prompt_messages,
+          prompt: prompt,
           stopWhen: stepCountIs(5),
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
@@ -182,27 +346,39 @@ export async function POST(request: Request) {
             functionId: 'stream-text',
           },
         });
+        
 
         result.consumeStream();
-
+        console.log('result', result)
+        const xxx = result.toUIMessageStream({
+          sendReasoning: true,
+        })
+        //console.log('xxx', xxx)
         dataStream.merge(
-          result.toUIMessageStream({
-            sendReasoning: true,
-          }),
+          xxx
         );
       },
       generateId: generateUUID,
       onFinish: async ({ messages }) => {
+        console.log('POST onFinish', messages)
+        let assistant_msgs = messages.map((message) => {
+          console.log('POST onFinish map', message)
+          const msg ={
+          id: message.id,
+          role: message.role,
+          parts: message.parts,
+          createdAt: new Date(),
+          attachments: [],
+          metadata: message.metadata || metadata,
+          chatId: id,
+        }
+        console.log('onFinish assistant_msgs msg', msg)
+      return msg
+    })
         await saveMessages({
-          messages: messages.map((message) => ({
-            id: message.id,
-            role: message.role,
-            parts: message.parts,
-            createdAt: new Date(),
-            attachments: [],
-            chatId: id,
-          })),
+          messages: assistant_msgs
         });
+        console.log('assistant message saved - 3', assistant_msgs)
       },
       onError: (error) => {
         console.log(error);
@@ -212,6 +388,7 @@ export async function POST(request: Request) {
 
     const streamContext = getStreamContext();
 
+    //console.log('streamContext', streamContext)
     if (streamContext) {
       return new Response(
         await streamContext.resumableStream(streamId, () =>

@@ -18,11 +18,26 @@ export const postRequestBodySchema = z.object({
   id: z.string().uuid(),
   message: z.object({
     id: z.string().uuid(),
-    role: z.enum(['user']),
+    role: z.enum(['user', 'assistant']),
     parts: z.array(partSchema),
+    metadata: z.object({
+      topicId: z.string(),
+      subtopicId: z.string(),
+      questionId: z.nullable(z.string()).optional(),
+    }),
   }),
   selectedChatModel: z.enum(['chat-model', 'chat-model-reasoning']),
   selectedVisibilityType: z.enum(['public', 'private']),
+  topicId: z.string().optional(),
+  subtopicId: z.string().optional(),
+  questionId: z.string().optional(),
+  userAnswers: z.array(
+    z.object({
+      qid: z.string().optional(),
+      question: z.string().optional(),
+      answer: z.string().optional(),
+    }),
+  ).optional(),
 });
 
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;

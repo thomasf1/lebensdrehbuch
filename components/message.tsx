@@ -20,6 +20,8 @@ import type { UseChatHelpers } from '@ai-sdk/react';
 import type { ChatMessage } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
 
+import { guidedTopics } from '@/lib/guided-topics';
+
 // Type narrowing is handled by TypeScript's control flow analysis
 // The AI SDK provides proper discriminated unions for tool calls
 
@@ -49,6 +51,7 @@ const PurePreviewMessage = ({
   );
 
   useDataStream();
+  //console.log('message renderer', message);
 
   return (
     <AnimatePresence>
@@ -59,6 +62,30 @@ const PurePreviewMessage = ({
         animate={{ y: 0, opacity: 1 }}
         data-role={message.role}
       >
+        {/* Topic/Subtopic titles for assistant messages, now as a single line above the message bubble */}
+        {message.role === 'assistant' &&
+          message.metadata &&
+          message.metadata.topicId &&
+          message.metadata.subtopicId &&
+          (() => {
+            try {
+              const topic = guidedTopics[message.metadata.topicId];
+              const subtopic = topic?.subtopics[message.metadata.subtopicId];
+              if (topic && subtopic) {
+                return (
+                  <div className="mb-1 ml-0">
+                    <span className="text-xs text-gray-400">
+                      {topic.title} &rarr; {subtopic.title}
+                    </span>
+                  </div>
+                );
+              }
+            } catch (error) {
+              console.log('topic msg error', error);
+            }
+            return null;
+          })()}
+        
         <div
           className={cn(
             'flex gap-4 w-full group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl',
@@ -68,6 +95,7 @@ const PurePreviewMessage = ({
             },
           )}
         >
+          
           {message.role === 'assistant' && (
             <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
               <div className="translate-y-px">
@@ -117,7 +145,7 @@ const PurePreviewMessage = ({
                 if (mode === 'view') {
                   return (
                     <div key={key} className="flex flex-row gap-2 items-start">
-                      {message.role === 'user' && !isReadonly && (
+                      {message.role === 'user' && !isReadonly && false && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
