@@ -27,6 +27,7 @@ import {
   type DBMessage,
   type Chat,
   stream,
+  chatSummary,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
@@ -534,9 +535,50 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
 
     return streamIds.map(({ id }) => id);
   } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get stream ids by chat id',
-    );
+    throw new ChatSDKError('bad_request:database', 'Failed to get stream ids by chat id');
+  }
+}
+
+export async function saveChatSummary({
+  chatId,
+  topicId,
+  subtopicId,
+  summary,
+  status = 'complete',
+}: {
+  chatId: string;
+  topicId: string;
+  subtopicId: string;
+  summary: string;
+  status?: string;
+}) {
+  try {
+    await db
+      .insert(chatSummary)
+      .values({
+        chatId,
+        topicId,
+        subtopicId,
+        summary,
+        status,
+      })
+      .onConflictDoNothing();
+  } catch (error) {
+    console.error('Error saving chat summary:', error);
+    throw error;
+  }
+}
+
+export async function getChatSummariesByUserId(userId: string) {
+  try {
+    return await db
+      .select()
+      .from(chatSummary)
+      .innerJoin(chat, eq(chat.id, chatSummary.chatId))
+      .where(eq(chat.userId, userId))
+      .orderBy(asc(chatSummary.topicId), asc(chatSummary.subtopicId));
+  } catch (error) {
+    console.error('Error fetching chat summaries:', error);
+    throw error;
   }
 }

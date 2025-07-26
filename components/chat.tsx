@@ -30,6 +30,7 @@ import type { UseChatHelpers } from '@ai-sdk/react';
 
 
 
+
 export function Chat({
   id,
   initialMessages,
@@ -256,7 +257,7 @@ export function Chat({
   //////////////////////////////////////////////// messages
   function parseMessage (message: ChatMessage, onFinish: boolean = false) {
     console.log('sendGuidedMessage', sendGuidedMessage)
-    //console.log('parseMessage', message, onFinish);
+    console.log('parseMessage', message, onFinish);
     //console.log('***************************')
     //console.log('***', message.id)
     //console.log('***************************')
@@ -373,17 +374,17 @@ export function Chat({
 
         // Completed message
         if (res === 'complete') {
-          // xxx
-
-
+          // Save the summary via API
+          handleSaveSummary(id, topicId, subtopicId, content);
+          
           // next answer
           sendGuidedMessage()
 
 
         }
         
-        content = text.slice(9).trim();
-      res = 'complete';
+        //content = text.slice(9).trim();
+      //res = 'complete';
 
         // ccc
 
@@ -472,8 +473,37 @@ export function Chat({
   ////////////////////////////////////////////////
 
 
+  const handleSaveSummary = async (chatId: string, topicId: string, subtopicId: string, summary: string) => {
+    try {
+      const response = await fetch('/api/chat-summaries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatId,
+          topicId,
+          subtopicId,
+          summary,
+          status: 'complete'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save summary');
+      }
+
+      console.log('Summary saved successfully');
+      return true;
+    } catch (error) {
+      console.error('Error saving summary:', error);
+      return false;
+    }
+  };
+
   if (typeof window !== 'undefined') {
     window.parseMessage = parseMessage;
+    window.handleSaveSummary = handleSaveSummary;
   }
   
 
@@ -542,6 +572,9 @@ export function Chat({
   useEffect(() => {
     console.log('useEffect status', status)
     // This effect runs every time a message is added
+    if (messages.length === 0) {
+      return;
+    }
     parseMessage(messages.at(-1), false);
     /*
     if (messages.length > 0) {

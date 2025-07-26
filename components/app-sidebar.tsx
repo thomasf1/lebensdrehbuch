@@ -3,7 +3,7 @@
 import type { User } from 'next-auth';
 import { useRouter } from 'next/navigation';
 
-import { PlusIcon } from '@/components/icons';
+import { PlusIcon, RouteIcon } from '@/components/icons';
 import { SidebarHistory } from '@/components/sidebar-history';
 import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import { Button } from '@/components/ui/button';
@@ -59,7 +59,24 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarHistory user={user} />
+        <div className="space-y-1">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2"
+            asChild
+          >
+            <Link 
+              href="/summaries"
+              onClick={() => setOpenMobile(false)}
+            >
+              <RouteIcon size={16} />
+              <span>Zusammenfassungen</span>
+            </Link>
+          </Button>
+        </div>
+        <div className="border-t pt-2">
+          <SidebarHistory user={user} />
+        </div>
       </SidebarContent>
       <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
     </Sidebar>

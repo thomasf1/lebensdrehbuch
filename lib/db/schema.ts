@@ -153,6 +153,21 @@ export const suggestion = pgTable(
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
 
+export const chatSummary = pgTable('ChatSummary', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  chatId: uuid('chatId')
+    .notNull()
+    .references(() => chat.id),
+  topicId: text('topicId').notNull(),
+  subtopicId: text('subtopicId').notNull(),
+  summary: text('summary').notNull(),
+  status: text('status').notNull().default('complete'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+});
+
+export type ChatSummary = InferSelectModel<typeof chatSummary>;
+
 export const stream = pgTable(
   'Stream',
   {
