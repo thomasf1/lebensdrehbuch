@@ -133,8 +133,8 @@ export function Chat({
 
     }
   }
-
-  function getMessageTextPart (message: ChatMessage, failOnNotFound: boolean = false) {
+  // add return type
+  function getMessageTextPart (message: ChatMessage, failOnNotFound: boolean = false): {type: string, text: string} {
     for (let i = 0; i < message.parts.length; i++) {
       if (message.parts[i].type === 'text') {
         return message.parts[i]
@@ -145,7 +145,7 @@ export function Chat({
       //console.log('getMessageTextPart - failOnNotFound', failOnNotFound)
       throw Error('no messagePart found')
     }
-    return false
+    return {type: 'text', text: ''}
   }
 
   function getUserAnswers(messages: ChatMessage[]) {
@@ -263,8 +263,8 @@ export function Chat({
     //console.log('***************************')
     let content = 'Bitte erläutere deine Antwort noch etwas genauer.';
     let res = 'fail';
-    let questionId = undefined;
-    let question = undefined;
+    let questionId = '';
+    let question = '';
     let topicId = message.metadata?.topicId || topicIdRef.current || ''
     if (topicId && topicIdRef.current === undefined) {
       topicIdRef.current = topicId;
@@ -353,7 +353,7 @@ export function Chat({
       };
       message.metadata.topicId = topicId;
       message.metadata.subtopicId = subtopicId;
-      message.metadata.questionId = message.metadata.questionId || questionId || null;
+      message.metadata.questionId = message.metadata.questionId || questionId || '';
       question = question || content;
 
 
@@ -590,7 +590,7 @@ export function Chat({
   if (status == 'streaming') {
     parseMessage(messages.at(-1), false);
   }
-  if (status == 'done') {
+  if (status ==='done') {
     parseMessage(messages.at(-1), true);
   }
   

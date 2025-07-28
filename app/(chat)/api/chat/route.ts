@@ -90,7 +90,7 @@ function generatePrompt (currentMessage: string, topicId: string, subtopicId: st
   }
   //const question = subtopic.questions[questionId] || null;
   userAnswers.push({
-    qid: questionId || null,
+    qid: questionId || '',
     question: subtopic.questions[questionId] || question || null,
     answer: currentMessage,
   });
@@ -176,8 +176,8 @@ export async function POST(request: Request) {
       selectedVisibilityType: VisibilityType;
       topicId?: string;
       subtopicId?: string;
-      questionId?: string | null;
-      question?: string | null;
+      questionId?: string;
+      question?: string;
       userAnswers?: any;
     } = requestBody;
     
