@@ -67,6 +67,7 @@ function PureArtifact({
   votes,
   isReadonly,
   selectedVisibilityType,
+  sendGuidedMessage
 }: {
   chatId: string;
   input: string;
@@ -82,6 +83,7 @@ function PureArtifact({
   regenerate: UseChatHelpers<ChatMessage>['regenerate'];
   isReadonly: boolean;
   selectedVisibilityType: VisibilityType;
+  sendGuidedMessage: (topicId: string, subtopicId: string | null, questionId?: string | null) => void;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
@@ -333,6 +335,7 @@ function PureArtifact({
                     setAttachments={setAttachments}
                     messages={messages}
                     sendMessage={sendMessage}
+                    sendGuidedMessage={sendGuidedMessage}
                     className="bg-background dark:bg-muted"
                     setMessages={setMessages}
                     selectedVisibilityType={selectedVisibilityType}

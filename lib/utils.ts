@@ -99,17 +99,25 @@ export function sanitizeText(text: string) {
 
 export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
   console.log('convertToUIMessages', messages);
-  return messages.map((message) => ({
-    id: message.id,
-    role: message.role as 'user' | 'assistant' | 'system',
-    parts: message.parts as UIMessagePart<CustomUIDataTypes, ChatTools>[],
-    metadata: {
-      createdAt: formatISO(message.createdAt),
-      topicId: message.metadata?.topicId,
-      subtopicId: message.metadata?.subtopicId,
-      questionId: message.metadata?.questionId,
-    },
-  }));
+  return messages.map((message) => {
+    // Validate the role is one of the allowed values
+    const validRoles = ['user', 'assistant', 'system'] as const;
+    const role = validRoles.includes(message.role as any) 
+      ? message.role as 'user' | 'assistant' | 'system'
+      : 'user'; // Default to 'user' if role is invalid
+      
+    return {
+      id: message.id,
+      role: role as 'system' | 'user' | 'assistant',
+      parts: message.parts as UIMessagePart<CustomUIDataTypes, ChatTools>[],
+      metadata: {
+        createdAt: formatISO(message.createdAt),
+        topicId: message.metadata?.topicId,
+        subtopicId: message.metadata?.subtopicId,
+        questionId: message.metadata?.questionId,
+      },
+    };
+  });
 }
 
 export function getTextFromMessage(message: ChatMessage): string {

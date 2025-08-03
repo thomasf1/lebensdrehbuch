@@ -39,22 +39,26 @@ import type { ChatModel } from '@/lib/ai/models';
 import type { VisibilityType } from '@/components/visibility-selector';
 
 import { guidedTopics } from '@/lib/guided-topics';
+import type { DBMessage, Document } from '@/lib/db/schema';
 
 export const maxDuration = 60;
 
 
-function getMessageTextPart (message: ChatMessage, failOnNotFound: boolean = false) {
+function getMessageTextPart(message: ChatMessage, failOnNotFound: boolean = false): { type: string; text: string } { //| null
   for (let i = 0; i < message.parts.length; i++) {
-    if (message.parts[i].type === 'text') {
-      return message.parts[i]
+    const part = message.parts[i];
+    if (part.type === 'text' && 'text' in part) {
+      return { type: 'text', text: part.text };
     }
   }
-  console.log('no messagePart found', JSON.stringify(message))
+  
+  console.log('no text messagePart found', JSON.stringify(message));
+  
   if (failOnNotFound) {
-    //console.log('getMessageTextPart - failOnNotFound', failOnNotFound)
-    throw Error('no messagePart found')
+    throw new Error('No text part found in message');
   }
-  return false
+  
+  return {type: 'empty', text: ''}
 }
 
 let globalStreamContext: ResumableStreamContext | null = null;
@@ -80,7 +84,7 @@ export function getStreamContext() {
 }
 
 // needs topic, subtopic, questionid, userAnswers -> filter questions, 
-function generatePrompt (currentMessage: string, topicId: string, subtopicId: string, question: string, questionId: string | undefined | null, userAnswers: any
+function generatePrompt (currentMessage: string, topicId: string, subtopicId: string, question: string, questionId: string, userAnswers: any
 ) {
   const topic = guidedTopics[topicId];
   const subtopic = topic.subtopics[subtopicId];
@@ -91,7 +95,7 @@ function generatePrompt (currentMessage: string, topicId: string, subtopicId: st
   //const question = subtopic.questions[questionId] || null;
   userAnswers.push({
     qid: questionId || '',
-    question: subtopic.questions[questionId] || question || null,
+    question: subtopic.questions[questionId] || question || '',
     answer: currentMessage,
   });
   console.log('userAnswers-1', userAnswers);
@@ -271,7 +275,7 @@ export async function POST(request: Request) {
       questionId: myQuestionId,
     };
 
-    let user_msg = {
+    let user_msg: DBMessage = {
       chatId: id,
       id: message.id,
       role: 'user',
@@ -293,7 +297,7 @@ export async function POST(request: Request) {
 
     //console.log('uiMessages', JSON.stringify(uiMessages, null, 2));
 
-    let prompt = null;
+    let prompt = undefined;
     //let messages = [
     //  msg
     //];
@@ -306,7 +310,7 @@ export async function POST(request: Request) {
     }
     else {
       const messagesFromDb = await getMessagesByChatId({ id });
-      const uiMessages = [...convertToUIMessages(messagesFromDb), user_msg];
+      const uiMessages = [...convertToUIMessages(messagesFromDb)]; //const uiMessages = [...convertToUIMessages(messagesFromDb), user_msg];
       let messages = convertToModelMessages(uiMessages);
       prompt_messages = messages;
     }

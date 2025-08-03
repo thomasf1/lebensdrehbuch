@@ -56,7 +56,7 @@ export function Chat({
   const { mutate } = useSWRConfig();
   const { setDataStream } = useDataStream();
   const [input, setInput] = useState<string>('');
-  let sendGuidedMessage = () => {};
+  let sendGuidedMessage: any = () => {};
   
   const processedMessageIds = useRef<Array<string>>([]);
 
@@ -70,12 +70,12 @@ export function Chat({
   //const [questionId, setQuestionId] = useState<string | null>(null);
   //const [userAnswers, setUserAnswers] = useState<any>([]);
   // Stupid hack to get the topicId to the prepareSendMessagesRequest function
-  const topicIdRef = useRef<string | undefined>(undefined);
+  const topicIdRef = useRef<string>('');
   //topicIdRef.current = topicId;
-  const subtopicIdRef = useRef<string | undefined>(undefined);
+  const subtopicIdRef = useRef<string>('');
   //subtopicIdRef.current = subtopicId;
-  const questionIdRef = useRef<string | undefined>(undefined);
-  const questionRef = useRef<string | undefined>(undefined);
+  const questionIdRef = useRef<string>('');
+  const questionRef = useRef<string>('');
   //questionIdRef.current = questionId;
   const userAnswersRef = useRef<Array<any>>([]);
 
@@ -134,7 +134,7 @@ export function Chat({
     }
   }
   // add return type
-  function getMessageTextPart (message: ChatMessage, failOnNotFound: boolean = false): {type: string, text: string} {
+  function getMessageTextPart (message: ChatMessage, failOnNotFound: boolean = false): any {
     for (let i = 0; i < message.parts.length; i++) {
       if (message.parts[i].type === 'text') {
         return message.parts[i]
@@ -361,7 +361,7 @@ export function Chat({
       const answer = {
         qid: questionId,
         question: question,
-        answer: message.content
+        answer: messagePart.text
       }
       //console.log('answer', answer)
       if (!processedMessageIds.current.includes(message.id)) {
@@ -401,8 +401,8 @@ export function Chat({
         // Set the 
         console.log('******** parse onFinish 11', messages.length, JSON.stringify(messages))
         // delay with setTimeout
-        window.setMessages = setMessages;
-        window.message = message;
+        //window.setMessages = setMessages;
+        //window.message = message;
         /*
         setTimeout(() => {
           console.log('******** parse onFinish 22', messages.length, JSON.stringify(messages))
@@ -500,11 +500,11 @@ export function Chat({
       return false;
     }
   };
-
+  /*
   if (typeof window !== 'undefined') {
     window.parseMessage = parseMessage;
     window.handleSaveSummary = handleSaveSummary;
-  }
+  }*/
   
 
 
@@ -519,7 +519,7 @@ export function Chat({
   } = useChat<ChatMessage>({
     id,
     messages: initialMessages,
-    sendExtraMessageFields: true,
+    //sendExtraMessageFields: true,
     experimental_throttle: 100,
     generateId: generateUUID,
     transport: new DefaultChatTransport({
@@ -563,9 +563,11 @@ export function Chat({
     },
   });
   //console.log('messages', messages)
+  /*
   if (typeof window !== 'undefined') {
     window.messages = messages;
   }
+  */
 
   //console.log('messages.at(-1)', messages.at(-1))
   //console.log(status)
@@ -586,11 +588,15 @@ export function Chat({
     }
       */
   }, [messages]);
+
+  if (messages === undefined) {
+    throw new Error('messages is undefined');
+  }
   
   if (status == 'streaming') {
     parseMessage(messages.at(-1), false);
   }
-  if (status ==='done') {
+  if (status === 'done') {
     parseMessage(messages.at(-1), true);
   }
   
@@ -639,9 +645,9 @@ export function Chat({
       const agentMessage: ChatMessage = {
         id: agentMessageId,
         role: 'assistant' as const,
-        content: firstQuestion,
+        //content: firstQuestion,
         parts: [{ type: 'text' as const, text: firstQuestion }],
-        createdAt: new Date(),
+        //createdAt: new Date(),
         metadata: {
           topicId: flowTopic.id,
           subtopicId: flowSubtopic.id,
@@ -735,21 +741,23 @@ export function Chat({
   */
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
-
+  /*
   if (typeof window !== 'undefined') {
     window.getUserAnswers = getUserAnswers;
     window.sendGuidedMessage = sendGuidedMessage;
   }
-
+  */
   useAutoResume({
     autoResume,
     initialMessages,
     resumeStream,
     setMessages,
   });
+  /*
   if (typeof window !== 'undefined') {
     window.status2 = status;
   }
+  */
   //console.log('status', status)
 
   return (
@@ -809,6 +817,7 @@ export function Chat({
         votes={votes}
         isReadonly={isReadonly}
         selectedVisibilityType={visibilityType}
+        sendGuidedMessage={sendGuidedMessage}
       />
     </>
   );

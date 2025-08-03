@@ -23,8 +23,8 @@ export const postRequestBodySchema = z.object({
     metadata: z.object({
       topicId: z.string(),
       subtopicId: z.string(),
-      questionId: z.nullable(z.string()).optional(),
-      createdAt: z.date().optional(),
+      questionId: z.string(),
+      createdAt: z.string().datetime().optional(),
     }),
   }),
   selectedChatModel: z.enum(['chat-model', 'chat-model-reasoning']),

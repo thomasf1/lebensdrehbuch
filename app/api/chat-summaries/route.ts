@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { saveChatSummary, getChatSummariesByUserId } from '@/lib/db/queries';
-import { getServerSession } from 'next-auth/next';
-import { auth, type UserType } from '@/app/(auth)/auth';
+//import { getServerSession } from 'next-auth/next';
+import { auth } from '@/app/(auth)/auth';
 import { ChatSDKError } from '@/lib/errors';
 
 export async function GET() {

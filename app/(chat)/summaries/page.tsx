@@ -116,7 +116,7 @@ export default function SummariesPage() {
         selectedModelId={DEFAULT_CHAT_MODEL}
         selectedVisibilityType="private"
         isReadonly={true}
-        session={session}
+        session={session!}
       />
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="max-w-4xl mx-auto">

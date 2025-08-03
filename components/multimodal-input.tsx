@@ -54,7 +54,7 @@ function PureMultimodalInput({
   messages: Array<UIMessage>;
   setMessages: UseChatHelpers<ChatMessage>['setMessages'];
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
-  sendGuidedMessage: (topicId: string, subtopicId: string | null) => void;
+  sendGuidedMessage: any;
   className?: string;
   selectedVisibilityType: VisibilityType;
 }) {
