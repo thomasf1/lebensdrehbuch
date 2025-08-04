@@ -6,8 +6,6 @@ import {
 import { xai } from '@ai-sdk/xai';
 import { google } from '@ai-sdk/google';
 
-import { google } from '@ai-sdk/google';
-
 import {
   artifactModel,
   chatModel,
