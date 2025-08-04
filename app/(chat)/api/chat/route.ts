@@ -43,22 +43,25 @@ import type { DBMessage, Document } from '@/lib/db/schema';
 
 export const maxDuration = 60;
 
-
-function getMessageTextPart(message: ChatMessage, failOnNotFound: boolean = false): { type: string; text: string } { //| null
+function getMessageTextPart(
+  message: ChatMessage,
+  failOnNotFound: boolean = false,
+): { type: string; text: string } {
+  //| null
   for (let i = 0; i < message.parts.length; i++) {
     const part = message.parts[i];
     if (part.type === 'text' && 'text' in part) {
       return { type: 'text', text: part.text };
     }
   }
-  
+
   console.log('no text messagePart found', JSON.stringify(message));
-  
+
   if (failOnNotFound) {
     throw new Error('No text part found in message');
   }
-  
-  return {type: 'empty', text: ''}
+
+  return { type: 'empty', text: '' };
 }
 
 let globalStreamContext: ResumableStreamContext | null = null;
@@ -83,8 +86,14 @@ export function getStreamContext() {
   return globalStreamContext;
 }
 
-// needs topic, subtopic, questionid, userAnswers -> filter questions, 
-function generatePrompt (currentMessage: string, topicId: string, subtopicId: string, question: string, questionId: string, userAnswers: any
+// needs topic, subtopic, questionid, userAnswers -> filter questions,
+function generatePrompt(
+  currentMessage: string,
+  topicId: string,
+  subtopicId: string,
+  question: string,
+  questionId: string,
+  userAnswers: any,
 ) {
   const topic = guidedTopics[topicId];
   const subtopic = topic.subtopics[subtopicId];
@@ -99,14 +108,18 @@ function generatePrompt (currentMessage: string, topicId: string, subtopicId: st
     answer: currentMessage,
   });
   console.log('userAnswers-1', userAnswers);
-    // filter out qid from userAnswers of subtopic.questions
-    const answeredQids = new Set(userAnswers.map((qa: { qid: string }) => qa.qid));
-    console.log('answeredQids', answeredQids);
-    // Get all question IDs, filter out the answered ones, then map to their text
-    const unaskedQuestions = Object.entries(subtopic.questions)
-      .filter(([qid]) => !answeredQids.has(qid))
-      .map(([qid, question]) => {return {qid: qid, question: question}});
-    console.log('unaskedQuestions', unaskedQuestions);
+  // filter out qid from userAnswers of subtopic.questions
+  const answeredQids = new Set(
+    userAnswers.map((qa: { qid: string }) => qa.qid),
+  );
+  console.log('answeredQids', answeredQids);
+  // Get all question IDs, filter out the answered ones, then map to their text
+  const unaskedQuestions = Object.entries(subtopic.questions)
+    .filter(([qid]) => !answeredQids.has(qid))
+    .map(([qid, question]) => {
+      return { qid: qid, question: question };
+    });
+  console.log('unaskedQuestions', unaskedQuestions);
 
   let prompt = '';
   const promptStart = `
@@ -121,7 +134,7 @@ ${userAnswers.map((qa: { question: string; answer: string }) => `Frage: ${qa.que
   if (unaskedQuestions.length > 0) {
     prompt = `${promptStart}
 Hier sind die noch nicht gestellten Leitfragen für das Subthema:
-${unaskedQuestions.map((q: { qid: string; question: string; }, i: number) => `qid ${q.qid}: ${q.question}`).join('\n')}
+${unaskedQuestions.map((q: { qid: string; question: string }, i: number) => `qid ${q.qid}: ${q.question}`).join('\n')}
 
 Beurteile, ob die Antworten ausreichend und vollständig sind um die Frage "${subtopic.title}" zu beantworten.
 Wenn ja, antworte exakt mit:
@@ -184,7 +197,7 @@ export async function POST(request: Request) {
       question?: string;
       userAnswers?: any;
     } = requestBody;
-    
+
     console.log('****************************************************');
     console.log('****************************************************');
     console.log('****************************************************');
@@ -194,8 +207,8 @@ export async function POST(request: Request) {
     const myTopicId = topicId || message.metadata?.topicId || '';
     const mySubtopicId = subtopicId || message.metadata?.subtopicId || '';
     const myQuestionId = questionId || message.metadata?.questionId || '';
-    const messagePart = getMessageTextPart(message)
-    console.log('question', question)
+    const messagePart = getMessageTextPart(message);
+    console.log('question', question);
     const session = await auth();
 
     if (!session?.user) {
@@ -247,18 +260,15 @@ export async function POST(request: Request) {
           subtopicId: mySubtopicId,
           questionId: myQuestionId,
         },
-      }
+      };
       await saveMessages({
-        messages: [
-          msg
-        ],
+        messages: [msg],
       });
-      console.log('assistant message saved - 1', msg)
-      return new Response('');;
+      console.log('assistant message saved - 1', msg);
+      return new Response('');
     }
 
     //const messagesFromDb = await getMessagesByChatId({ id });
-    
 
     const { longitude, latitude, city, country } = geolocation(request);
 
@@ -283,15 +293,13 @@ export async function POST(request: Request) {
       attachments: [],
       createdAt: new Date(),
       metadata: metadata,
-    }
-    
+    };
+
     await saveMessages({
-      messages: [
-        user_msg
-      ],
+      messages: [user_msg],
     });
-    
-    console.log('user message saved - 2', user_msg)
+
+    console.log('user message saved - 2', user_msg);
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
@@ -301,22 +309,33 @@ export async function POST(request: Request) {
     //let messages = [
     //  msg
     //];
-    
+
     //let create = convertToModelMessages(uiMessages);
     let prompt_messages = undefined;
-    console.log('myTopicId && mySubtopicId', myTopicId && mySubtopicId, myTopicId, mySubtopicId)
+    console.log(
+      'myTopicId && mySubtopicId',
+      myTopicId && mySubtopicId,
+      myTopicId,
+      mySubtopicId,
+    );
     if (myTopicId && mySubtopicId) {
-      prompt = generatePrompt(messagePart.text || '', myTopicId, mySubtopicId, question || '', myQuestionId, userAnswers);
-    }
-    else {
+      prompt = generatePrompt(
+        messagePart.text || '',
+        myTopicId,
+        mySubtopicId,
+        question || '',
+        myQuestionId,
+        userAnswers,
+      );
+    } else {
       const messagesFromDb = await getMessagesByChatId({ id });
       const uiMessages = [...convertToUIMessages(messagesFromDb)]; //const uiMessages = [...convertToUIMessages(messagesFromDb), user_msg];
       let messages = convertToModelMessages(uiMessages);
       prompt_messages = messages;
     }
-    
+
     //console.log('createUIMessageStream - messages', messages)
-    console.log('createUIMessageStream - prompt', prompt)
+    console.log('createUIMessageStream - prompt', prompt);
 
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
@@ -350,42 +369,38 @@ export async function POST(request: Request) {
             functionId: 'stream-text',
           },
         });
-        
 
         result.consumeStream();
-        console.log('result', result)
+        console.log('result', result);
         const xxx = result.toUIMessageStream({
           sendReasoning: true,
-        })
+        });
         //console.log('xxx', xxx)
-        dataStream.merge(
-          xxx
-        );
+        dataStream.merge(xxx);
       },
       generateId: generateUUID,
       onFinish: async ({ messages }) => {
-        console.log('POST onFinish', messages)
+        console.log('POST onFinish', messages);
         let assistant_msgs = messages.map((message) => {
-          console.log('POST onFinish map', message)
-          const msg ={
-          id: message.id,
-          role: message.role,
-          parts: message.parts,
-          createdAt: new Date(),
-          attachments: [],
-          metadata: message.metadata || metadata,
-          chatId: id,
-        }
-        console.log('onFinish assistant_msgs msg', msg)
-      return msg
-    })
-        await saveMessages({
-          messages: assistant_msgs
+          console.log('POST onFinish map', message);
+          const msg = {
+            id: message.id,
+            role: message.role,
+            parts: message.parts,
+            createdAt: new Date(),
+            attachments: [],
+            metadata: message.metadata || metadata,
+            chatId: id,
+          };
+          console.log('onFinish assistant_msgs msg', msg);
+          return msg;
         });
-        console.log('assistant message saved - 3', assistant_msgs)
+        await saveMessages({
+          messages: assistant_msgs,
+        });
+        console.log('assistant message saved - 3', assistant_msgs);
       },
-      onError: (error) => {
-        console.log(error);
+      onError: () => {
         return 'Oops, an error occurred!';
       },
     });
@@ -400,7 +415,7 @@ export async function POST(request: Request) {
         ),
       );
     } else {
-      return new Response(stream);
+      return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
     }
   } catch (error) {
     console.log('error', error);
