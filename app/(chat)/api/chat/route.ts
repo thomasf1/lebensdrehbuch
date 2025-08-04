@@ -400,7 +400,8 @@ export async function POST(request: Request) {
         });
         console.log('assistant message saved - 3', assistant_msgs);
       },
-      onError: () => {
+      onError: (error) => {
+        console.log('POST onError', error);
         return 'Oops, an error occurred!';
       },
     });

@@ -47,6 +47,7 @@ export async function getUser(email: string): Promise<Array<User>> {
   try {
     return await db.select().from(user).where(eq(user.email, email));
   } catch (error) {
+    console.error('Error getting user:', error);
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get user by email',
@@ -60,6 +61,7 @@ export async function createUser(email: string, password: string) {
   try {
     return await db.insert(user).values({ email, password: hashedPassword });
   } catch (error) {
+    console.error('Error creating user:', error);
     throw new ChatSDKError('bad_request:database', 'Failed to create user');
   }
 }
@@ -74,6 +76,7 @@ export async function createGuestUser() {
       email: user.email,
     });
   } catch (error) {
+    console.error('Error creating guest user:', error);
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to create guest user',
@@ -104,7 +107,7 @@ export async function saveChat({
       metadata,
     });
   } catch (error) {
-    console.log('error', error)
+    console.log('error', error);
     throw new ChatSDKError('bad_request:database', 'Failed to save chat');
   }
 }
@@ -196,7 +199,7 @@ export async function getChatsByUserId({
       hasMore,
     };
   } catch (error) {
-    console.log(error)
+    console.log(error);
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get chats by user id',
@@ -220,7 +223,7 @@ export async function saveMessages({
   try {
     return await db.insert(message).values(messages);
   } catch (error) {
-    console.log('error', error)
+    console.log('error', error);
     throw new ChatSDKError('bad_request:database', 'Failed to save messages');
   }
 }
@@ -535,7 +538,10 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
 
     return streamIds.map(({ id }) => id);
   } catch (error) {
-    throw new ChatSDKError('bad_request:database', 'Failed to get stream ids by chat id');
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get stream ids by chat id',
+    );
   }
 }
 
