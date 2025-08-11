@@ -208,7 +208,7 @@ function PureMultimodalInput({
       scrollToBottom();
     }
   }, [status, scrollToBottom]);
-  console.log('*** PureMultimodalInput ***', messages.length);
+  //console.log('*** PureMultimodalInput ***', messages.length);
 
   return (
     <div className="relative w-full flex flex-col gap-4">
@@ -329,7 +329,7 @@ function PureMultimodalInput({
 export const MultimodalInput = memo(
   PureMultimodalInput,
   (prevProps, nextProps) => {
-    console.log('prevProps, nextProps', prevProps, nextProps);
+    //console.log('prevProps, nextProps', prevProps, nextProps);
     if (prevProps.input !== nextProps.input) return false;
     if (prevProps.status !== nextProps.status) return false;
     if (!equal(prevProps.attachments, nextProps.attachments)) return false;

@@ -52,7 +52,7 @@ export function Chat({
   const { mutate } = useSWRConfig();
   const { setDataStream } = useDataStream();
   const [input, setInput] = useState<string>('');
-  let sendGuidedMessage: any = () => {};
+  //let sendGuidedMessage: any = undefined;
 
   const processedMessageIds = useRef<Array<string>>([]);
 
@@ -65,6 +65,9 @@ export function Chat({
   //const [questionId, setQuestionId] = useState<string | null>(null);
   //const [userAnswers, setUserAnswers] = useState<any>([]);
   // Stupid hack to get the topicId to the prepareSendMessagesRequest function
+  const sendGuidedMessageRef = useRef(() => {
+    console.error('sendGuidedMessageRef default');
+  });
   const topicIdRef = useRef<string>('');
   //topicIdRef.current = topicId;
   const subtopicIdRef = useRef<string>('');
@@ -80,7 +83,7 @@ export function Chat({
   //setTestVar('HALLO2');
 
   if (!topicIdRef.current && initialMessages.length > 0) {
-    console.log('*** re-setting topicId and subtopicId ***');
+    //console.log('*** re-setting topicId and subtopicId ***');
     // Loop through messages from the last to first and get the first topicId, subtopicId as well as all the userAnswers of the last subtopicId
     //let topicId = null;
     //let subtopicId = null;
@@ -142,7 +145,7 @@ export function Chat({
         return message.parts[i];
       }
     }
-    console.log('no messagePart found', JSON.stringify(message));
+    console.warn('no messagePart found', JSON.stringify(message));
     if (failOnNotFound) {
       //console.log('getMessageTextPart - failOnNotFound', failOnNotFound)
       throw Error('no messagePart found');
@@ -208,17 +211,17 @@ export function Chat({
   //console.log('typeof window', typeof window)
 
   function prepareSendMessagesRequest(params: any) {
-    console.log('*** prepareSendMessagesRequest', params);
+    //console.log('*** prepareSendMessagesRequest', params);
     const { messages, id } = params;
     //console.log('prepareSendMessagesRequest-1', messages, id);
     const my_message = messages.at(-1);
-    console.log('prepareSendMessagesRequest-10', my_message);
+    //console.log('prepareSendMessagesRequest-10', my_message);
     const topicId = my_message.metadata?.topicId || topicIdRef.current || '';
     const subtopicId =
       my_message.metadata?.subtopicId || subtopicIdRef.current || '';
     //console.log('prepareSendMessagesRequest-11')
-    let userAnswers = getUserAnswers(messages);
-    console.log('userAnswers 1', userAnswers);
+    const userAnswers = getUserAnswers(messages);
+    //console.log('userAnswers 1', userAnswers);
 
     //console.log('prepareSendMessagesRequest-111')
     // maybe process userAnswers here???, depending on subtopicId and messages
@@ -252,7 +255,7 @@ export function Chat({
         userAnswers: userAnswers,
       },
     };
-    console.log('*** prepareSendMessagesRequest body', body);
+    //console.log('*** prepareSendMessagesRequest body', body);
     return body;
   }
   //}, [topicId]);
@@ -264,7 +267,7 @@ export function Chat({
     onFinish: boolean = false,
   ) {
     //console.log('sendGuidedMessage', sendGuidedMessage);
-    console.log('* parseMessage', message, status, onFinish);
+    //console.log('* parseMessage', message, status, onFinish);
     //console.log('***************************')
     //console.log('***', message.id)
     //console.log('***************************')
@@ -280,7 +283,7 @@ export function Chat({
       message.metadata?.subtopicId || subtopicIdRef.current || ''; //undefined subtopicIdRef.current;
     //console.log('* subtopicId, subtopicIdRef.current', subtopicId, subtopicIdRef.current)
     if (subtopicId && subtopicIdRef.current === undefined) {
-      console.log('* setting subtopicIdRef.current', subtopicId);
+      //console.log('* setting subtopicIdRef.current', subtopicId);
       subtopicIdRef.current = subtopicId;
     }
 
@@ -331,9 +334,10 @@ export function Chat({
     }
     if (text.toLowerCase().startsWith('next:')) {
       content = text.slice(5).trim();
-      console.log('*** is next', content);
+      //console.log('*** is next', content);
       res = 'next';
-      console.log('*** NEXT');
+      //console.log('*** NEXT');
+      /*
       console.log(
         'topicIdRef.current',
         topicIdRef.current,
@@ -353,6 +357,7 @@ export function Chat({
         guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current]
           ?.questions[content.trim()],
       );
+      */
       question =
         guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current]
           ?.questions[content.trim()];
@@ -388,7 +393,7 @@ export function Chat({
       };
       //console.log('answer', answer)
       if (!processedMessageIds.current.includes(message.id)) {
-        console.log('xxx');
+        console.log('message id already processed');
       }
 
       if (onFinish && !processedMessageIds.current.includes(message.id)) {
@@ -406,8 +411,11 @@ export function Chat({
           handleSaveSummary(id, topicId, subtopicId, content);
 
           // next answer
-          console.log('onFinish sendGuidedMessage');
-          sendGuidedMessage();
+          console.log(
+            'onFinish sendGuidedMessage',
+            sendGuidedMessageRef.current,
+          );
+          sendGuidedMessageRef.current();
         }
 
         //content = text.slice(9).trim();
@@ -422,11 +430,13 @@ export function Chat({
         }
 
         // Set the
+        /*
         console.log(
           '******** parse onFinish 11',
           messages.length,
           JSON.stringify(messages),
         );
+        */
         // delay with setTimeout
         //window.setMessages = setMessages;
         //window.message = message;
@@ -494,12 +504,14 @@ export function Chat({
     }
 
     // updated message?
+    /*
     console.log(
       'parseMessage done',
       { content, res },
       message,
       JSON.stringify(message),
     );
+    */
     return { content, res };
   }
   ////////////////////////////////////////////////
@@ -566,7 +578,7 @@ export function Chat({
       setDataStream((ds) => (ds ? [...ds, dataPart] : []));
     },
     onFinish: (data) => {
-      console.log('*** onFinish', data);
+      //console.log('*** onFinish', data);
       //data.message.HAHA = 'HAHAHAHAHAHA'
       //parseMessage(data.message, true);
       //data.message
@@ -585,7 +597,7 @@ export function Chat({
       //setMessages(messages)
       //console.log('mutate unstable_serialize(getChatHistoryPaginationKey)', unstable_serialize(getChatHistoryPaginationKey))
       mutate(unstable_serialize(getChatHistoryPaginationKey));
-      console.log('*** onFinish done');
+      //console.log('*** onFinish done');
     },
     onError: (error) => {
       if (error instanceof ChatSDKError) {
@@ -623,9 +635,9 @@ export function Chat({
   }
 
   //parseMessage(messages.at(-1), status);
-  console.log('status', status);
+  //console.log('status', status);
 
-  sendGuidedMessage = (
+  sendGuidedMessageRef.current = (
     topicId: string,
     subtopicId: string | null,
     questionId: string | null,
@@ -800,12 +812,12 @@ export function Chat({
   */
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
-
+  /*
   if (typeof window !== 'undefined') {
     window.getUserAnswers = getUserAnswers;
-    window.sendGuidedMessage = sendGuidedMessage;
+    window.sendGuidedMessage = sendGuidedMessageRef.current;
   }
-
+  */
   useAutoResume({
     autoResume,
     initialMessages,
@@ -854,7 +866,7 @@ export function Chat({
               messages={messages}
               setMessages={setMessages}
               sendMessage={sendMessage}
-              sendGuidedMessage={sendGuidedMessage}
+              sendGuidedMessage={sendGuidedMessageRef.current}
               selectedVisibilityType={visibilityType}
             />
           )}
@@ -876,7 +888,7 @@ export function Chat({
         votes={votes}
         isReadonly={isReadonly}
         selectedVisibilityType={visibilityType}
-        sendGuidedMessage={sendGuidedMessage}
+        sendGuidedMessage={sendGuidedMessageRef.current}
       />
     </>
   );

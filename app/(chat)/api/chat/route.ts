@@ -381,6 +381,7 @@ export async function POST(request: Request) {
         });
         //console.log('xxx', xxx)
         dataStream.merge(xxx);
+        console.log('POST execute done');
       },
       generateId: generateUUID,
       onFinish: async ({ messages }) => {
