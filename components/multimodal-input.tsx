@@ -208,6 +208,7 @@ function PureMultimodalInput({
       scrollToBottom();
     }
   }, [status, scrollToBottom]);
+  console.log('*** PureMultimodalInput ***', messages.length);
 
   return (
     <div className="relative w-full flex flex-col gap-4">
@@ -244,6 +245,7 @@ function PureMultimodalInput({
             chatId={chatId}
             selectedVisibilityType={selectedVisibilityType}
             sendGuidedMessage={sendGuidedMessage}
+            textareaRef={textareaRef}
           />
         )}
 
@@ -300,7 +302,7 @@ function PureMultimodalInput({
             event.preventDefault();
 
             if (status !== 'ready') {
-              console.log('status', status)
+              console.log('status', status);
               toast.error('Please wait for the model to finish its response!');
             } else {
               submitForm();
@@ -308,8 +310,6 @@ function PureMultimodalInput({
           }
         }}
       />
-
-      
 
       <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
         {status === 'submitted' ? (
@@ -329,11 +329,13 @@ function PureMultimodalInput({
 export const MultimodalInput = memo(
   PureMultimodalInput,
   (prevProps, nextProps) => {
+    console.log('prevProps, nextProps', prevProps, nextProps);
     if (prevProps.input !== nextProps.input) return false;
     if (prevProps.status !== nextProps.status) return false;
     if (!equal(prevProps.attachments, nextProps.attachments)) return false;
     if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
       return false;
+    if (prevProps.messages.length !== nextProps.messages.length) return false;
 
     return true;
   },

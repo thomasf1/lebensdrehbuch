@@ -240,6 +240,10 @@ export async function POST(request: Request) {
         visibility: selectedVisibilityType,
         metadata: {},
       });
+      //console.log('chat_save_resp', chat_save_resp);
+      // get chat id from response
+      //const chat_id = chat_save_resp.id;
+      //console.log('chat id', chat_id);
     } else {
       if (chat.userId !== session.user.id) {
         return new ChatSDKError('forbidden:chat').toResponse();
@@ -265,7 +269,7 @@ export async function POST(request: Request) {
         messages: [msg],
       });
       console.log('assistant message saved - 1', msg);
-      return new Response('');
+      return new Response(id);
     }
 
     //const messagesFromDb = await getMessagesByChatId({ id });
@@ -402,7 +406,7 @@ export async function POST(request: Request) {
       },
       onError: (error) => {
         console.log('POST onError', error);
-        return 'Oops, an error occurred!';
+        return 'An error occurred!';
       },
     });
 
@@ -419,10 +423,15 @@ export async function POST(request: Request) {
       return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
     }
   } catch (error) {
-    console.log('error', error);
+    console.error('*** Error in chat POST handler:', error);
     if (error instanceof ChatSDKError) {
       return error.toResponse();
     }
+    // Return a generic error response for unhandled errors
+    return new ChatSDKError(
+      'bad_request:chat',
+      'An unexpected error occurred while processing your request',
+    ).toResponse();
   }
 }
 

@@ -25,11 +25,7 @@ import { useDataStream } from './data-stream-provider';
 
 import { guidedTopics } from '@/lib/guided-topics';
 
-
 import type { UseChatHelpers } from '@ai-sdk/react';
-
-
-
 
 export function Chat({
   id,
@@ -57,14 +53,13 @@ export function Chat({
   const { setDataStream } = useDataStream();
   const [input, setInput] = useState<string>('');
   let sendGuidedMessage: any = () => {};
-  
+
   const processedMessageIds = useRef<Array<string>>([]);
 
   //const [topicId, setTopicId] = useState<any>(null);
   //const [topicId, setTopicId] = useState<string | null>(null);
   //const [subtopicId, setSubtopicId] = useState<any>(null);
 
-  
   //const [topicId, setTopicId] = useState<string | null>(null);
   //const [subtopicId, setSubtopicId] = useState<string | null>(null);
   //const [questionId, setQuestionId] = useState<string | null>(null);
@@ -80,12 +75,12 @@ export function Chat({
   const userAnswersRef = useRef<Array<any>>([]);
 
   //userAnswersRef.current = userAnswers;
-  
+
   //const [testVar, setTestVar] = useState<string>('HALLO');
   //setTestVar('HALLO2');
 
   if (!topicIdRef.current && initialMessages.length > 0) {
-    console.log('*** re-setting topicId and subtopicId ***')
+    console.log('*** re-setting topicId and subtopicId ***');
     // Loop through messages from the last to first and get the first topicId, subtopicId as well as all the userAnswers of the last subtopicId
     //let topicId = null;
     //let subtopicId = null;
@@ -95,7 +90,7 @@ export function Chat({
     // loop messages from first to last
     for (let i = 0; i < initialMessages.length; i++) {
       const message = initialMessages[i];
-      parseMessage(message, false)
+      parseMessage(message, 'ready', false);
     }
 
     for (let i = initialMessages.length - 1; i >= 0; i--) {
@@ -105,12 +100,17 @@ export function Chat({
         //setTopicId(message.metadata.topicId);
         topicIdRef.current = message.metadata.topicId;
       }
-      if (!subtopicIdRef.current && message.metadata && message.metadata.subtopicId) {
+      if (
+        !subtopicIdRef.current &&
+        message.metadata &&
+        message.metadata.subtopicId
+      ) {
         //setSubtopicId(message.metadata.subtopicId);
         subtopicIdRef.current = message.metadata.subtopicId;
       }
       // Break if subtopicId changes
-      if (message.metadata?.subtopicId) { // subtopicIdRef.current && subtopicIdRef.current !== message.metadata?.subtopicId
+      if (message.metadata?.subtopicId) {
+        // subtopicIdRef.current && subtopicIdRef.current !== message.metadata?.subtopicId
         break;
       }
       // Get the last user answer
@@ -130,34 +130,40 @@ export function Chat({
         lastAnswer = {qid: null, question: null, answer: null}
       }
       */
-
     }
   }
   // add return type
-  function getMessageTextPart (message: ChatMessage, failOnNotFound: boolean = false): any {
+  function getMessageTextPart(
+    message: ChatMessage,
+    failOnNotFound: boolean = false,
+  ): any {
     for (let i = 0; i < message.parts.length; i++) {
       if (message.parts[i].type === 'text') {
-        return message.parts[i]
+        return message.parts[i];
       }
     }
-    console.log('no messagePart found', JSON.stringify(message))
+    console.log('no messagePart found', JSON.stringify(message));
     if (failOnNotFound) {
       //console.log('getMessageTextPart - failOnNotFound', failOnNotFound)
-      throw Error('no messagePart found')
+      throw Error('no messagePart found');
     }
-    return {type: 'text', text: ''}
+    return { type: 'text', text: '' };
   }
 
   function getUserAnswers(messages: ChatMessage[]) {
-    // go through messages from last to first and extract answers from messages with fitting topicID and subtopicId with current 
-    let userAnswers = []
-    let lastAnswer = {qid: '', question: '', answer: ''}
+    // go through messages from last to first and extract answers from messages with fitting topicID and subtopicId with current
+    let userAnswers = [];
+    let lastAnswer = { qid: '', question: '', answer: '' };
     // loop though messages
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
 
       // Break at topic or subtopic mismatch
-      if (message.metadata && (message.metadata.topicId !== topicIdRef.current || message.metadata.subtopicId !== subtopicIdRef.current)) {
+      if (
+        message.metadata &&
+        (message.metadata.topicId !== topicIdRef.current ||
+          message.metadata.subtopicId !== subtopicIdRef.current)
+      ) {
         // Break for non-subtopic messages
         break;
       }
@@ -169,58 +175,54 @@ export function Chat({
           //throw Error('Message without metadata')
           //continue
         }
-        
-        const messagePart = getMessageTextPart(message)
+
+        const messagePart = getMessageTextPart(message);
         if (!messagePart) {
           //console.log('no messagePart found', JSON.stringify(message))
           //return []
-          continue
+          continue;
         }
         //lastAnswer.qid = lastAnswer.qid || message.metadata?.questionId || ''
-        lastAnswer.answer = messagePart.text
+        lastAnswer.answer = messagePart.text;
         //Store and reset
         //console.log('*** lastAnswer', lastAnswer)
         if (lastAnswer.answer && lastAnswer.question) {
-          userAnswers.push(lastAnswer) // Finished with assistant message
+          userAnswers.push(lastAnswer); // Finished with assistant message
+        } else {
+          console.log('discarding lastAnswer', lastAnswer);
         }
-        else {
-          console.log('discarding lastAnswer', lastAnswer)
-        }
-        lastAnswer = {qid: '', question: '', answer: ''}
+        lastAnswer = { qid: '', question: '', answer: '' };
         //parseMessage(message, true)
       }
       if (message.role === 'assistant') {
         //console.log('assistant message', message, getMessageTextPart(message, true).text)
         if (message.metadata && message.metadata.questionId) {
-          lastAnswer.qid = message.metadata.questionId || ''
+          lastAnswer.qid = message.metadata.questionId || '';
         }
-        lastAnswer.question = getMessageTextPart(message, true)?.text || ''
+        lastAnswer.question = getMessageTextPart(message, true)?.text || '';
       }
     }
-    return userAnswers
+    return userAnswers;
   }
 
   //console.log('typeof window', typeof window)
-  
-    
-  
 
-  function prepareSendMessagesRequest (params: any) {
+  function prepareSendMessagesRequest(params: any) {
     console.log('*** prepareSendMessagesRequest', params);
     const { messages, id } = params;
     //console.log('prepareSendMessagesRequest-1', messages, id);
     const my_message = messages.at(-1);
-    //console.log('prepareSendMessagesRequest-10', my_message)
+    console.log('prepareSendMessagesRequest-10', my_message);
     const topicId = my_message.metadata?.topicId || topicIdRef.current || '';
-    const subtopicId = my_message.metadata?.subtopicId || subtopicIdRef.current || '';
+    const subtopicId =
+      my_message.metadata?.subtopicId || subtopicIdRef.current || '';
     //console.log('prepareSendMessagesRequest-11')
-    let userAnswers = getUserAnswers(messages)
+    let userAnswers = getUserAnswers(messages);
     console.log('userAnswers 1', userAnswers);
 
-    
     //console.log('prepareSendMessagesRequest-111')
     // maybe process userAnswers here???, depending on subtopicId and messages
-    
+
     if (!my_message.metadata) {
       my_message.metadata = {};
     }
@@ -231,9 +233,10 @@ export function Chat({
     //console.log('topicIdRef', topicIdRef.current, topicIdRef)
     //console.log('topicId', topicId)
     //console.log('my_message - topicId', my_message.metadata.topicId, topicId);
-    my_message.metadata.topicId = topicId //my_message.metadata.topicId || topicIdRef.current || '';
-    my_message.metadata.subtopicId = subtopicId // my_message.metadata.subtopicId || subtopicIdRef.current || '';
-    my_message.metadata.questionId = my_message.metadata.questionId || questionIdRef.current || null;
+    my_message.metadata.topicId = topicId; //my_message.metadata.topicId || topicIdRef.current || '';
+    my_message.metadata.subtopicId = subtopicId; // my_message.metadata.subtopicId || subtopicIdRef.current || '';
+    my_message.metadata.questionId =
+      my_message.metadata.questionId || questionIdRef.current || '';
     //console.log('prepareSendMessagesRequest-3');
     //console.log('my_message 2', my_message);
     const body = {
@@ -246,18 +249,22 @@ export function Chat({
         subtopicId: subtopicIdRef.current,
         questionId: questionIdRef.current,
         question: questionRef.current,
-        userAnswers: userAnswers
-      }
-    }
-    console.log('*** prepareSendMessagesRequest body', body)
+        userAnswers: userAnswers,
+      },
+    };
+    console.log('*** prepareSendMessagesRequest body', body);
     return body;
   }
   //}, [topicId]);
 
   //////////////////////////////////////////////// messages
-  function parseMessage (message: ChatMessage, onFinish: boolean = false) {
-    console.log('sendGuidedMessage', sendGuidedMessage)
-    console.log('parseMessage', message, onFinish);
+  function parseMessage(
+    message: ChatMessage,
+    status: string,
+    onFinish: boolean = false,
+  ) {
+    //console.log('sendGuidedMessage', sendGuidedMessage);
+    console.log('* parseMessage', message, status, onFinish);
     //console.log('***************************')
     //console.log('***', message.id)
     //console.log('***************************')
@@ -265,43 +272,42 @@ export function Chat({
     let res = 'fail';
     let questionId = '';
     let question = '';
-    let topicId = message.metadata?.topicId || topicIdRef.current || ''
+    let topicId = message.metadata?.topicId || topicIdRef.current || '';
     if (topicId && topicIdRef.current === undefined) {
       topicIdRef.current = topicId;
     }
-    let subtopicId = message.metadata?.subtopicId || subtopicIdRef.current || '' //undefined subtopicIdRef.current;
+    let subtopicId =
+      message.metadata?.subtopicId || subtopicIdRef.current || ''; //undefined subtopicIdRef.current;
     //console.log('* subtopicId, subtopicIdRef.current', subtopicId, subtopicIdRef.current)
     if (subtopicId && subtopicIdRef.current === undefined) {
-      console.log('* setting subtopicIdRef.current', subtopicId)
+      console.log('* setting subtopicIdRef.current', subtopicId);
       subtopicIdRef.current = subtopicId;
     }
-    
+
     if (message.role === 'user') {
-      return { content: 'user', res: 'user'};
+      return { content: 'user', res: 'user' };
     }
-    
 
     // Get the message parts with type text
     //console.log('parseMessage: message', message)
     // Find the first part with type text
-    let messagePart = getMessageTextPart(message)
+    let messagePart = getMessageTextPart(message);
     if (!messagePart) {
-      console.log('no messagePart found', JSON.stringify(message))
+      console.log('no messagePart found', JSON.stringify(message));
       return { content, res };
     }
-    
-    
+
     //console.log('parseMessage: messagePart', messagePart);
-    
+
     const text = messagePart.originalText || messagePart.text || '';
     messagePart.originalText = text;
-    
+
     if (text.toLowerCase().startsWith('complete:')) {
       content = text.slice(9).trim();
       res = 'complete';
       // Do next topic
       //processedMessageIds.current.push(message.id);
-  
+
       // Save the summary as a document with the guidedSummaryArtifact type
       /*
       const summaryDoc = {
@@ -325,14 +331,31 @@ export function Chat({
     }
     if (text.toLowerCase().startsWith('next:')) {
       content = text.slice(5).trim();
-      console.log('*** is next', content)
+      console.log('*** is next', content);
       res = 'next';
-      console.log('*** NEXT')
-      console.log('topicIdRef.current', topicIdRef.current, subtopicIdRef.current)
-      console.log('guidedTopics[topicIdRef.current]', guidedTopics[topicIdRef.current])
-      console.log('guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current]?', guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current])
-      console.log('guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current]?.questions[content.trim()]', content.trim(), guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current]?.questions[content.trim()])
-      question = guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current]?.questions[content.trim()]
+      console.log('*** NEXT');
+      console.log(
+        'topicIdRef.current',
+        topicIdRef.current,
+        subtopicIdRef.current,
+      );
+      console.log(
+        'guidedTopics[topicIdRef.current]',
+        guidedTopics[topicIdRef.current],
+      );
+      console.log(
+        'guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current]?',
+        guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current],
+      );
+      console.log(
+        'guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current]?.questions[content.trim()]',
+        content.trim(),
+        guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current]
+          ?.questions[content.trim()],
+      );
+      question =
+        guidedTopics[topicIdRef.current]?.subtopics[subtopicIdRef.current]
+          ?.questions[content.trim()];
       if (question) {
         questionId = content.trim();
       }
@@ -350,56 +373,60 @@ export function Chat({
       messagePart.text = content;
       if (!message.metadata) {
         message.metadata = {};
-      };
+      }
       message.metadata.topicId = topicId;
       message.metadata.subtopicId = subtopicId;
-      message.metadata.questionId = message.metadata.questionId || questionId || '';
+      message.metadata.questionId =
+        message.metadata.questionId || questionId || '';
       question = question || content;
 
-
-      // That should happen on send + 
+      // That should happen on send +
       const answer = {
         qid: questionId,
         question: question,
-        answer: messagePart.text
-      }
+        answer: messagePart.text,
+      };
       //console.log('answer', answer)
       if (!processedMessageIds.current.includes(message.id)) {
-        console.log('xxx')
+        console.log('xxx');
       }
 
       if (onFinish && !processedMessageIds.current.includes(message.id)) {
-        // Push the answer          
+        // Push the answer
+        console.log(
+          'onFinish push message.id',
+          message.id,
+          processedMessageIds.current,
+        );
         processedMessageIds.current.push(message.id);
 
         // Completed message
         if (res === 'complete') {
           // Save the summary via API
           handleSaveSummary(id, topicId, subtopicId, content);
-          
+
           // next answer
-          sendGuidedMessage()
-
-
+          console.log('onFinish sendGuidedMessage');
+          sendGuidedMessage();
         }
-        
+
         //content = text.slice(9).trim();
-      //res = 'complete';
+        //res = 'complete';
 
         // ccc
-
-        
 
         // save the answer
         if (res === 'clarify') {
           //await saveAnswer(answer);
           // start new guided topic
-          
         }
-        
 
-        // Set the 
-        console.log('******** parse onFinish 11', messages.length, JSON.stringify(messages))
+        // Set the
+        console.log(
+          '******** parse onFinish 11',
+          messages.length,
+          JSON.stringify(messages),
+        );
         // delay with setTimeout
         //window.setMessages = setMessages;
         //window.message = message;
@@ -446,7 +473,7 @@ export function Chat({
           console.log('*** messages', typeof messages)
           console.log('*** onFinish',  messages, setMessages)
         }*/
-        
+
         /*
       messages.map((msg) => {
         console.log('onFinish currentMessages msg', JSON.stringify(msg))
@@ -457,23 +484,32 @@ export function Chat({
       })*/
         //userAnswersRef.current.push(answer);
         //console.log('userAnswersRef.current', userAnswersRef.current)
-        questionIdRef.current = questionId
-        questionRef.current = question
+        questionIdRef.current = questionId;
+        questionRef.current = question;
         //const questionIdRef = useRef<string | undefined>(undefined);
         //const questionRef = useRef<string | undefined>(undefined);
         //questionIdRef.current = questionId;
         //const userAnswersRef = useRef<Array<any>>([]);
       }
     }
-    
+
     // updated message?
-    console.log('parseMessage done', { content, res }, message, JSON.stringify(message))
+    console.log(
+      'parseMessage done',
+      { content, res },
+      message,
+      JSON.stringify(message),
+    );
     return { content, res };
   }
   ////////////////////////////////////////////////
 
-
-  const handleSaveSummary = async (chatId: string, topicId: string, subtopicId: string, summary: string) => {
+  const handleSaveSummary = async (
+    chatId: string,
+    topicId: string,
+    subtopicId: string,
+    summary: string,
+  ) => {
     try {
       const response = await fetch('/api/chat-summaries', {
         method: 'POST',
@@ -485,7 +521,7 @@ export function Chat({
           topicId,
           subtopicId,
           summary,
-          status: 'complete'
+          status: 'complete',
         }),
       });
 
@@ -505,8 +541,6 @@ export function Chat({
     window.parseMessage = parseMessage;
     window.handleSaveSummary = handleSaveSummary;
   }*/
-  
-
 
   const {
     messages,
@@ -525,14 +559,14 @@ export function Chat({
     transport: new DefaultChatTransport({
       api: '/api/chat',
       fetch: fetchWithErrorHandlers,
-      prepareSendMessagesRequest: prepareSendMessagesRequest
+      prepareSendMessagesRequest: prepareSendMessagesRequest,
     }),
     onData: (dataPart) => {
-      console.log('onData', dataPart)
+      console.log('onData', dataPart);
       setDataStream((ds) => (ds ? [...ds, dataPart] : []));
     },
     onFinish: (data) => {
-      console.log('*** onFinish', data)
+      console.log('*** onFinish', data);
       //data.message.HAHA = 'HAHAHAHAHAHA'
       //parseMessage(data.message, true);
       //data.message
@@ -551,7 +585,7 @@ export function Chat({
       //setMessages(messages)
       //console.log('mutate unstable_serialize(getChatHistoryPaginationKey)', unstable_serialize(getChatHistoryPaginationKey))
       mutate(unstable_serialize(getChatHistoryPaginationKey));
-      console.log('*** onFinish done')
+      console.log('*** onFinish done');
     },
     onError: (error) => {
       if (error instanceof ChatSDKError) {
@@ -571,110 +605,129 @@ export function Chat({
 
   //console.log('messages.at(-1)', messages.at(-1))
   //console.log(status)
-  useEffect(() => {
-    console.log('useEffect status', status)
-    // This effect runs every time a message is added
-    if (messages.length === 0) {
-      return;
-    }
-    parseMessage(messages.at(-1), false);
-    /*
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === 'assistant') {
-        // Perform your mutation or side-effect here
-        // Example: Save to DB, log, etc.
-      }
-    }
-      */
-  }, [messages]);
 
   if (messages === undefined) {
     throw new Error('messages is undefined');
   }
-  
-  if (status == 'streaming') {
-    parseMessage(messages.at(-1), false);
-  }
-  if (status === 'done') {
-    parseMessage(messages.at(-1), true);
-  }
-  
-  //parseMessage(messages.at(-1), status);
-  console.log('status', status)
 
-  sendGuidedMessage = (topicId: string, subtopicId: string | null, questionId: string | null) => {
+  if (status == 'streaming' || status === 'ready') {
+    //console.log('*** pre parseMessage', status, messages, messages.at(-1));
+    let onFinish = false;
+    if (status === 'ready') {
+      onFinish = true;
+    }
+    //status === 'ready' ? onFinish = true : onFinish = false
+    if (messages.at(-1)) {
+      parseMessage(messages.at(-1), status, onFinish);
+    }
+  }
+
+  //parseMessage(messages.at(-1), status);
+  console.log('status', status);
+
+  sendGuidedMessage = (
+    topicId: string,
+    subtopicId: string | null,
+    questionId: string | null,
+  ) => {
     //message: ChatMessage
-    
+
     console.log('startGuidedFlow', topicId, subtopicId, status);
 
     if (!topicId) {
-      console.log('random topicId')
-      topicId = Object.keys(guidedTopics)[Math.floor(Math.random() * Object.keys(guidedTopics).length)];
-      console.log('random topicId', topicId)
+      console.log('random topicId');
+      topicId =
+        Object.keys(guidedTopics)[
+          Math.floor(Math.random() * Object.keys(guidedTopics).length)
+        ];
+      console.log('random topicId', topicId);
       //random subtopic
-      subtopicId = Object.keys(guidedTopics[topicId].subtopics)[Math.floor(Math.random() * Object.keys(guidedTopics[topicId].subtopics).length)];
-      console.log('random subtopicId', subtopicId)
+      subtopicId = Object.keys(guidedTopics[topicId].subtopics)[
+        Math.floor(
+          Math.random() * Object.keys(guidedTopics[topicId].subtopics).length,
+        )
+      ];
+      console.log('random subtopicId', subtopicId);
     }
     const flowTopic = guidedTopics[topicId];
-      if (!flowTopic) {
-        throw new Error(`Topic with id ${topicId} not found`);
-      }
+    if (!flowTopic) {
+      throw new Error(`Topic with id ${topicId} not found`);
+    }
 
-      let flowSubtopic = Object.values(flowTopic.subtopics)[0];
-      if (subtopicId && flowTopic.subtopics[subtopicId]) {
-        flowSubtopic = flowTopic.subtopics[subtopicId];
-      }
+    let flowSubtopic = Object.values(flowTopic.subtopics)[0];
+    if (subtopicId && flowTopic.subtopics[subtopicId]) {
+      flowSubtopic = flowTopic.subtopics[subtopicId];
+    }
 
-      const firstQuestion = Object.values(flowSubtopic.questions)[0];
-      const firstQuestionId = Object.keys(flowSubtopic.questions)[0];
-      //questionId = questionId || firstQuestionId;
-      //console.log('setTopicId', flowTopic.id)
-      topicIdRef.current = flowTopic.id;
-      subtopicIdRef.current = flowSubtopic.id;
-      questionIdRef.current = firstQuestionId;
-      questionRef.current = firstQuestion;
+    const firstQuestion = Object.values(flowSubtopic.questions)[0];
+    const firstQuestionId = Object.keys(flowSubtopic.questions)[0];
+    //questionId = questionId || firstQuestionId;
+    //console.log('setTopicId', flowTopic.id)
+    topicIdRef.current = flowTopic.id;
+    subtopicIdRef.current = flowSubtopic.id;
+    questionIdRef.current = firstQuestionId;
+    questionRef.current = firstQuestion;
 
-      //setTopicId(flowTopic.id);
-      //topicIdRef.current = flowTopic.id;
-      //setTopicId(flowTopic.id);
-      //setSubtopicId(flowSubtopic.id);
-      //setQuestionId(questionId);
+    //setTopicId(flowTopic.id);
+    //topicIdRef.current = flowTopic.id;
+    //setTopicId(flowTopic.id);
+    //setSubtopicId(flowSubtopic.id);
+    //setQuestionId(questionId);
 
-      const agentMessageId = generateUUID();
-      const agentMessage: ChatMessage = {
-        id: agentMessageId,
-        role: 'assistant' as const,
-        //content: firstQuestion,
-        parts: [{ type: 'text' as const, text: firstQuestion }],
-        //createdAt: new Date(),
-        metadata: {
-          topicId: flowTopic.id,
-          subtopicId: flowSubtopic.id,
-          questionId: firstQuestionId,
-        },
-      };
+    const agentMessageId = generateUUID();
+    const agentMessage: ChatMessage = {
+      id: agentMessageId,
+      role: 'assistant' as const,
+      //content: firstQuestion,
+      parts: [{ type: 'text' as const, text: firstQuestion }],
+      //createdAt: new Date(),
+      metadata: {
+        topicId: flowTopic.id,
+        subtopicId: flowSubtopic.id,
+        questionId: firstQuestionId,
+      },
+    };
 
-
-      messages.push(agentMessage);
-      setMessages(messages);
-      fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          message: agentMessage,
-          selectedChatModel: initialChatModel,
-          selectedVisibilityType: visibilityType,
-          topicId: flowTopic.id,
-          subtopicId: flowSubtopic.id,
-          //lastQuestion: firstQuestion,
-          //userAnswers: subtopicAnswers,
-          //first: true,
-        }),
-      });
-      //sendMessage(agentMessage);
-      /*
+    //messages.push(agentMessage);
+    setMessages(messages.concat([agentMessage]));
+    //setInput('x');
+    //setInput('');
+    //setAttachments([]);
+    const xxx = fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        message: agentMessage,
+        selectedChatModel: initialChatModel,
+        selectedVisibilityType: visibilityType,
+        topicId: flowTopic.id,
+        subtopicId: flowSubtopic.id,
+        //lastQuestion: firstQuestion,
+        //userAnswers: subtopicAnswers,
+        //first: true,
+      }),
+    });
+    /*
+    xxx.then((resp) => {
+      console.log('first agent message sent', resp);
+      console.log('first agent message sent', resp.body);
+      resp.body
+        ?.getReader()
+        .read()
+        .then(({ done, value }) => {
+          console.log('getReader', done, value);
+          const chatId = new TextDecoder().decode(value);
+          console.log('old chat ID', id);
+          console.log('chat ID', chatId);
+          id = chatId;
+          console.log('id', id);
+        });
+    });
+    */
+    //console.log('first agent message sent', xxx);
+    //sendMessage(agentMessage);
+    /*
       // remove all messages after the message with the given id
       this.state.messages = this.state.messages.slice(0, messageIndex + 1);
 
@@ -700,7 +753,13 @@ export function Chat({
       ...options,
     });
       */
-      console.log('done startGuidedFlow', topicId, subtopicId, status, agentMessage)
+    console.log(
+      'done startGuidedFlow',
+      topicId,
+      subtopicId,
+      status,
+      agentMessage,
+    );
   };
 
   const searchParams = useSearchParams();
@@ -741,12 +800,12 @@ export function Chat({
   */
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
-  /*
+
   if (typeof window !== 'undefined') {
     window.getUserAnswers = getUserAnswers;
     window.sendGuidedMessage = sendGuidedMessage;
   }
-  */
+
   useAutoResume({
     autoResume,
     initialMessages,

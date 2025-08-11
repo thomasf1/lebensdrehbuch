@@ -21,8 +21,7 @@ function PureSuggestedActions({
   selectedVisibilityType,
   sendGuidedMessage,
 }: SuggestedActionsProps) {
-  const topics = Object.values(guidedTopics)
-    .slice(2, 6);
+  const topics = Object.values(guidedTopics).slice(2, 6);
 
   return (
     <div

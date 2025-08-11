@@ -23,7 +23,7 @@ export const postRequestBodySchema = z.object({
     metadata: z.object({
       topicId: z.string(),
       subtopicId: z.string(),
-      questionId: z.string(),
+      questionId: z.string().optional(),
       createdAt: z.string().datetime().optional(),
     }),
   }),
@@ -32,13 +32,15 @@ export const postRequestBodySchema = z.object({
   topicId: z.string().optional(),
   subtopicId: z.string().optional(),
   questionId: z.string().optional(),
-  userAnswers: z.array(
-    z.object({
-      qid: z.string().optional(),
-      question: z.string().optional(),
-      answer: z.string().optional(),
-    }),
-  ).optional(),
+  userAnswers: z
+    .array(
+      z.object({
+        qid: z.string().optional(),
+        question: z.string().optional(),
+        answer: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;
