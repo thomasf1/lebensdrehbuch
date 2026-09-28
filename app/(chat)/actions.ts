@@ -1,18 +1,23 @@
-'use server';
+"use server";
 
-import { generateText, type UIMessage } from 'ai';
-import { cookies } from 'next/headers';
+import { generateText, type UIMessage } from "ai";
+import { cookies } from "next/headers";
+import { auth } from "@/app/(auth)/auth";
+import type { VisibilityType } from "@/components/chat/visibility-selector";
+import { titleModel } from "@/lib/ai/models";
+import { titlePrompt } from "@/lib/ai/prompts";
+import { getTitleModel } from "@/lib/ai/providers";
 import {
   deleteMessagesByChatIdAfterTimestamp,
+  getChatById,
   getMessageById,
-  updateChatVisiblityById,
-} from '@/lib/db/queries';
-import type { VisibilityType } from '@/components/visibility-selector';
-import { myProvider } from '@/lib/ai/providers';
+  updateChatVisibilityById,
+} from "@/lib/db/queries";
+import { getTextFromMessage } from "@/lib/utils";
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
-  cookieStore.set('chat-model', model);
+  cookieStore.set("chat-model", model);
 }
 
 export async function generateTitleFromUserMessage({
@@ -20,21 +25,35 @@ export async function generateTitleFromUserMessage({
 }: {
   message: UIMessage;
 }) {
-  const { text: title } = await generateText({
-    model: myProvider.languageModel('title-model'),
-    system: `\n
-    - you will generate a short title based on the first message a user begins a conversation with
-    - ensure it is not more than 80 characters long
-    - the title should be a summary of the user's message
-    - do not use quotes or colons`,
-    prompt: JSON.stringify(message),
+  const { text } = await generateText({
+    instructions: titlePrompt,
+    model: getTitleModel(),
+    prompt: getTextFromMessage(message),
+    providerOptions: {
+      gateway: { order: titleModel.gatewayOrder },
+    },
   });
-
-  return title;
+  return text
+    .replace(/^[#*"\s]+/, "")
+    .replace(/["]+$/, "")
+    .trim();
 }
 
 export async function deleteTrailingMessages({ id }: { id: string }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
   const [message] = await getMessageById({ id });
+  if (!message) {
+    throw new Error("Message not found");
+  }
+
+  const chat = await getChatById({ id: message.chatId });
+  if (!chat || chat.userId !== session.user.id) {
+    throw new Error("Unauthorized");
+  }
 
   await deleteMessagesByChatIdAfterTimestamp({
     chatId: message.chatId,
@@ -49,5 +68,15 @@ export async function updateChatVisibility({
   chatId: string;
   visibility: VisibilityType;
 }) {
-  await updateChatVisiblityById({ chatId, visibility });
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  const chat = await getChatById({ id: chatId });
+  if (!chat || chat.userId !== session.user.id) {
+    throw new Error("Unauthorized");
+  }
+
+  await updateChatVisibilityById({ chatId, visibility });
 }

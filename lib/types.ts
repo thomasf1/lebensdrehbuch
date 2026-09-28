@@ -1,14 +1,11 @@
-import { z } from 'zod';
-import type { getWeather } from './ai/tools/get-weather';
-import type { createDocument } from './ai/tools/create-document';
-import type { updateDocument } from './ai/tools/update-document';
-import type { requestSuggestions } from './ai/tools/request-suggestions';
-import type { InferUITool, UIMessage } from 'ai';
-
-import type { ArtifactKind } from '@/components/artifact';
-import type { Suggestion } from './db/schema';
-
-export type DataPart = { type: 'append-message'; message: string };
+import type { InferUITool, UIMessage } from "ai";
+import { z } from "zod";
+import type { ArtifactKind } from "@/components/chat/artifact";
+import type { createDocument } from "./ai/tools/create-document";
+import type { getWeather } from "./ai/tools/get-weather";
+import type { requestSuggestions } from "./ai/tools/request-suggestions";
+import type { updateDocument } from "./ai/tools/update-document";
+import type { Suggestion } from "./db/schema";
 
 export const messageMetadataSchema = z.object({
   createdAt: z.string(),
@@ -30,6 +27,13 @@ export type ChatTools = {
   requestSuggestions: requestSuggestionsTool;
 };
 
+export type WaitingStatusData = {
+  phase: "waiting" | "still-waiting" | "health" | "thinking";
+  message: string;
+  modelId: string;
+  modelName: string;
+};
+
 export type CustomUIDataTypes = {
   textDelta: string;
   imageDelta: string;
@@ -42,6 +46,8 @@ export type CustomUIDataTypes = {
   kind: ArtifactKind;
   clear: null;
   finish: null;
+  "chat-title": string;
+  "waiting-status": WaitingStatusData;
 };
 
 export type ChatMessage = UIMessage<
@@ -50,8 +56,8 @@ export type ChatMessage = UIMessage<
   ChatTools
 >;
 
-export interface Attachment {
+export type Attachment = {
   name: string;
   url: string;
   contentType: string;
-}
+};

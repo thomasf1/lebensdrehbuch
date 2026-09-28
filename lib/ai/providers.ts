@@ -1,39 +1,33 @@
-import {
-  customProvider,
-  extractReasoningMiddleware,
-  wrapLanguageModel,
-} from 'ai';
-import { xai } from '@ai-sdk/xai';
-import { google } from '@ai-sdk/google'
-
-import {
-  artifactModel,
-  chatModel,
-  reasoningModel,
-  titleModel,
-} from './models.test';
-import { isTestEnvironment } from '../constants';
+import { customProvider, gateway } from "ai";
+import { isTestEnvironment } from "../constants";
+import { titleModel } from "./models";
 
 export const myProvider = isTestEnvironment
-  ? customProvider({
-      languageModels: {
-        'chat-model': chatModel,
-        'chat-model-reasoning': reasoningModel,
-        'title-model': titleModel,
-        'artifact-model': artifactModel,
-      },
-    })
-  : customProvider({
-      languageModels: {
-        'chat-model': google('gemini-2.5-flash-preview-04-17'), //xai('grok-2-vision-1212'),
-        'chat-model-reasoning': wrapLanguageModel({
-          model: xai('grok-3-mini-beta'),
-          middleware: extractReasoningMiddleware({ tagName: 'think' }),
-        }),
-        'title-model': google('gemini-2.0-flash-lite-preview-02-05'), // xai('grok-2-1212'),
-        'artifact-model': google('gemini-2.5-flash-preview-04-17'), //xai('grok-2-1212'),
-      },
-      imageModels: {
-        'small-model': xai.imageModel('grok-2-image'),
-      },
-    });
+  ? (() => {
+      const {
+        chatModel,
+        titleModel: mockTitleModel,
+      } = require("./models.mock");
+      return customProvider({
+        languageModels: {
+          "chat-model": chatModel,
+          "title-model": mockTitleModel,
+        },
+      });
+    })()
+  : null;
+
+export function getLanguageModel(modelId: string) {
+  if (isTestEnvironment && myProvider) {
+    return myProvider.languageModel(modelId);
+  }
+
+  return gateway.languageModel(modelId);
+}
+
+export function getTitleModel() {
+  if (isTestEnvironment && myProvider) {
+    return myProvider.languageModel("title-model");
+  }
+  return gateway.languageModel(titleModel.id);
+}

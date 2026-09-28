@@ -1,75 +1,59 @@
-import { z } from 'zod';
-import { streamObject } from 'ai';
-import { myProvider } from '@/lib/ai/providers';
-import { codePrompt, updateDocumentPrompt } from '@/lib/ai/prompts';
-import { createDocumentHandler } from '@/lib/artifacts/server';
+import { streamText } from "ai";
+import { codePrompt, updateDocumentPrompt } from "@/lib/ai/prompts";
+import { getLanguageModel } from "@/lib/ai/providers";
+import { createDocumentHandler } from "@/lib/artifacts/server";
 
-export const codeDocumentHandler = createDocumentHandler<'code'>({
-  kind: 'code',
-  onCreateDocument: async ({ title, dataStream }) => {
-    let draftContent = '';
+function stripFences(code: string): string {
+  return code
+    .replace(/^```[\w]*\n?/, "")
+    .replace(/\n?```\s*$/, "")
+    .trim();
+}
 
-    const { fullStream } = streamObject({
-      model: myProvider.languageModel('artifact-model'),
-      system: codePrompt,
+export const codeDocumentHandler = createDocumentHandler<"code">({
+  kind: "code",
+  onCreateDocument: async ({ title, dataStream, modelId }) => {
+    let draftContent = "";
+
+    const { stream } = streamText({
+      instructions: `${codePrompt}\n\nOutput ONLY the code. No explanations, no markdown fences, no wrapping.`,
+      model: getLanguageModel(modelId),
       prompt: title,
-      schema: z.object({
-        code: z.string(),
-      }),
     });
 
-    for await (const delta of fullStream) {
-      const { type } = delta;
-
-      if (type === 'object') {
-        const { object } = delta;
-        const { code } = object;
-
-        if (code) {
-          dataStream.write({
-            type: 'data-codeDelta',
-            data: code ?? '',
-            transient: true,
-          });
-
-          draftContent = code;
-        }
+    for await (const delta of stream) {
+      if (delta.type === "text-delta") {
+        draftContent += delta.text;
+        dataStream.write({
+          data: stripFences(draftContent),
+          transient: true,
+          type: "data-codeDelta",
+        });
       }
     }
 
-    return draftContent;
+    return stripFences(draftContent);
   },
-  onUpdateDocument: async ({ document, description, dataStream }) => {
-    let draftContent = '';
+  onUpdateDocument: async ({ document, description, dataStream, modelId }) => {
+    let draftContent = "";
 
-    const { fullStream } = streamObject({
-      model: myProvider.languageModel('artifact-model'),
-      system: updateDocumentPrompt(document.content, 'code'),
+    const { stream } = streamText({
+      instructions: `${updateDocumentPrompt(document.content, "code")}\n\nOutput ONLY the complete updated code. No explanations, no markdown fences, no wrapping.`,
+      model: getLanguageModel(modelId),
       prompt: description,
-      schema: z.object({
-        code: z.string(),
-      }),
     });
 
-    for await (const delta of fullStream) {
-      const { type } = delta;
-
-      if (type === 'object') {
-        const { object } = delta;
-        const { code } = object;
-
-        if (code) {
-          dataStream.write({
-            type: 'data-codeDelta',
-            data: code ?? '',
-            transient: true,
-          });
-
-          draftContent = code;
-        }
+    for await (const delta of stream) {
+      if (delta.type === "text-delta") {
+        draftContent += delta.text;
+        dataStream.write({
+          data: stripFences(draftContent),
+          transient: true,
+          type: "data-codeDelta",
+        });
       }
     }
 
-    return draftContent;
+    return stripFences(draftContent);
   },
 });

@@ -1,78 +1,49 @@
-import { myProvider } from '@/lib/ai/providers';
-import { sheetPrompt, updateDocumentPrompt } from '@/lib/ai/prompts';
-import { createDocumentHandler } from '@/lib/artifacts/server';
-import { streamObject } from 'ai';
-import { z } from 'zod';
+import { streamText } from "ai";
+import { sheetPrompt, updateDocumentPrompt } from "@/lib/ai/prompts";
+import { getLanguageModel } from "@/lib/ai/providers";
+import { createDocumentHandler } from "@/lib/artifacts/server";
 
-export const sheetDocumentHandler = createDocumentHandler<'sheet'>({
-  kind: 'sheet',
-  onCreateDocument: async ({ title, dataStream }) => {
-    let draftContent = '';
+export const sheetDocumentHandler = createDocumentHandler<"sheet">({
+  kind: "sheet",
+  onCreateDocument: async ({ title, dataStream, modelId }) => {
+    let draftContent = "";
 
-    const { fullStream } = streamObject({
-      model: myProvider.languageModel('artifact-model'),
-      system: sheetPrompt,
+    const { stream } = streamText({
+      instructions: `${sheetPrompt}\n\nOutput ONLY the raw CSV data. No explanations, no markdown fences.`,
+      model: getLanguageModel(modelId),
       prompt: title,
-      schema: z.object({
-        csv: z.string().describe('CSV data'),
-      }),
     });
 
-    for await (const delta of fullStream) {
-      const { type } = delta;
-
-      if (type === 'object') {
-        const { object } = delta;
-        const { csv } = object;
-
-        if (csv) {
-          dataStream.write({
-            type: 'data-sheetDelta',
-            data: csv,
-            transient: true,
-          });
-
-          draftContent = csv;
-        }
+    for await (const delta of stream) {
+      if (delta.type === "text-delta") {
+        draftContent += delta.text;
+        dataStream.write({
+          data: draftContent,
+          transient: true,
+          type: "data-sheetDelta",
+        });
       }
     }
 
-    dataStream.write({
-      type: 'data-sheetDelta',
-      data: draftContent,
-      transient: true,
-    });
-
     return draftContent;
   },
-  onUpdateDocument: async ({ document, description, dataStream }) => {
-    let draftContent = '';
+  onUpdateDocument: async ({ document, description, dataStream, modelId }) => {
+    let draftContent = "";
 
-    const { fullStream } = streamObject({
-      model: myProvider.languageModel('artifact-model'),
-      system: updateDocumentPrompt(document.content, 'sheet'),
+    const { stream } = streamText({
+      instructions: `${updateDocumentPrompt(document.content, "sheet")}\n\nOutput ONLY the raw CSV data. No explanations, no markdown fences.`,
+      model: getLanguageModel(modelId),
       prompt: description,
-      schema: z.object({
-        csv: z.string(),
-      }),
     });
 
-    for await (const delta of fullStream) {
-      const { type } = delta;
-
-      if (type === 'object') {
-        const { object } = delta;
-        const { csv } = object;
-
-        if (csv) {
-          dataStream.write({
-            type: 'data-sheetDelta',
-            data: csv,
-            transient: true,
-          });
-
-          draftContent = csv;
-        }
+    for await (const delta of stream) {
+      if (delta.type === "text-delta") {
+        draftContent += delta.text;
+        dataStream.write({
+          data: draftContent,
+          transient: true,
+          type: "data-sheetDelta",
+        });
       }
     }
 

@@ -1,69 +1,51 @@
-import { smoothStream, streamText } from 'ai';
-import { myProvider } from '@/lib/ai/providers';
-import { createDocumentHandler } from '@/lib/artifacts/server';
-import { updateDocumentPrompt } from '@/lib/ai/prompts';
+import { smoothStream, streamText } from "ai";
+import { updateDocumentPrompt } from "@/lib/ai/prompts";
+import { getLanguageModel } from "@/lib/ai/providers";
+import { createDocumentHandler } from "@/lib/artifacts/server";
 
-export const textDocumentHandler = createDocumentHandler<'text'>({
-  kind: 'text',
-  onCreateDocument: async ({ title, dataStream }) => {
-    let draftContent = '';
+export const textDocumentHandler = createDocumentHandler<"text">({
+  kind: "text",
+  onCreateDocument: async ({ title, dataStream, modelId }) => {
+    let draftContent = "";
 
-    const { fullStream } = streamText({
-      model: myProvider.languageModel('artifact-model'),
-      system:
-        'Write about the given topic. Markdown is supported. Use headings wherever appropriate.',
-      experimental_transform: smoothStream({ chunking: 'word' }),
+    const { stream } = streamText({
+      experimental_transform: smoothStream({ chunking: "word" }),
+      instructions:
+        "Write about the given topic. Markdown is supported. Use headings wherever appropriate.",
+      model: getLanguageModel(modelId),
       prompt: title,
     });
 
-    for await (const delta of fullStream) {
-      const { type } = delta;
-
-      if (type === 'text') {
-        const { text } = delta;
-
-        draftContent += text;
-
+    for await (const delta of stream) {
+      if (delta.type === "text-delta") {
+        draftContent += delta.text;
         dataStream.write({
-          type: 'data-textDelta',
-          data: text,
+          data: delta.text,
           transient: true,
+          type: "data-textDelta",
         });
       }
     }
 
     return draftContent;
   },
-  onUpdateDocument: async ({ document, description, dataStream }) => {
-    let draftContent = '';
+  onUpdateDocument: async ({ document, description, dataStream, modelId }) => {
+    let draftContent = "";
 
-    const { fullStream } = streamText({
-      model: myProvider.languageModel('artifact-model'),
-      system: updateDocumentPrompt(document.content, 'text'),
-      experimental_transform: smoothStream({ chunking: 'word' }),
+    const { stream } = streamText({
+      experimental_transform: smoothStream({ chunking: "word" }),
+      instructions: updateDocumentPrompt(document.content, "text"),
+      model: getLanguageModel(modelId),
       prompt: description,
-      providerOptions: {
-        openai: {
-          prediction: {
-            type: 'content',
-            content: document.content,
-          },
-        },
-      },
     });
 
-    for await (const delta of fullStream) {
-      const { type } = delta;
-
-      if (type === 'text') {
-        const { text } = delta;
-
-        draftContent += text;
-
+    for await (const delta of stream) {
+      if (delta.type === "text-delta") {
+        draftContent += delta.text;
         dataStream.write({
-          type: 'data-textDelta',
-          data: text,
+          data: delta.text,
           transient: true,
+          type: "data-textDelta",
         });
       }
     }

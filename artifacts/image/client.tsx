@@ -1,29 +1,13 @@
-import { Artifact } from '@/components/create-artifact';
-import { CopyIcon, RedoIcon, UndoIcon } from '@/components/icons';
-import { ImageEditor } from '@/components/image-editor';
-import { toast } from 'sonner';
+import { toast } from "sonner";
+import { Artifact } from "@/components/chat/create-artifact";
+import { CopyIcon, RedoIcon, UndoIcon } from "@/components/chat/icons";
+import { ImageEditor } from "@/components/chat/image-editor";
 
 export const imageArtifact = new Artifact({
-  kind: 'image',
-  description: 'Useful for image generation',
-  onStreamPart: ({ streamPart, setArtifact }) => {
-    if (streamPart.type === 'data-imageDelta') {
-      setArtifact((draftArtifact) => ({
-        ...draftArtifact,
-        content: streamPart.data,
-        isVisible: true,
-        status: 'streaming',
-      }));
-    }
-  },
-  content: ImageEditor,
   actions: [
     {
+      description: "View Previous version",
       icon: <UndoIcon size={18} />,
-      description: 'View Previous version',
-      onClick: ({ handleVersionChange }) => {
-        handleVersionChange('prev');
-      },
       isDisabled: ({ currentVersionIndex }) => {
         if (currentVersionIndex === 0) {
           return true;
@@ -31,13 +15,13 @@ export const imageArtifact = new Artifact({
 
         return false;
       },
+      onClick: ({ handleVersionChange }) => {
+        handleVersionChange("prev");
+      },
     },
     {
+      description: "View Next version",
       icon: <RedoIcon size={18} />,
-      description: 'View Next version',
-      onClick: ({ handleVersionChange }) => {
-        handleVersionChange('next');
-      },
       isDisabled: ({ isCurrentVersion }) => {
         if (isCurrentVersion) {
           return true;
@@ -45,32 +29,48 @@ export const imageArtifact = new Artifact({
 
         return false;
       },
+      onClick: ({ handleVersionChange }) => {
+        handleVersionChange("next");
+      },
     },
     {
+      description: "Copy image to clipboard",
       icon: <CopyIcon size={18} />,
-      description: 'Copy image to clipboard',
       onClick: ({ content }) => {
         const img = new Image();
         img.src = `data:image/png;base64,${content}`;
 
         img.onload = () => {
-          const canvas = document.createElement('canvas');
+          const canvas = document.createElement("canvas");
           canvas.width = img.width;
           canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
+          const ctx = canvas.getContext("2d");
           ctx?.drawImage(img, 0, 0);
           canvas.toBlob((blob) => {
             if (blob) {
               navigator.clipboard.write([
-                new ClipboardItem({ 'image/png': blob }),
+                new ClipboardItem({ "image/png": blob }),
               ]);
             }
-          }, 'image/png');
+          }, "image/png");
         };
 
-        toast.success('Copied image to clipboard!');
+        toast.success("Copied image to clipboard!");
       },
     },
   ],
+  content: ImageEditor,
+  description: "Useful for image generation",
+  kind: "image",
+  onStreamPart: ({ streamPart, setArtifact }) => {
+    if (streamPart.type === "data-imageDelta") {
+      setArtifact((draftArtifact) => ({
+        ...draftArtifact,
+        content: streamPart.data,
+        isVisible: true,
+        status: "streaming",
+      }));
+    }
+  },
   toolbar: [],
 });

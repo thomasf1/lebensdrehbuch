@@ -1,55 +1,22 @@
-import { Artifact } from '@/components/create-artifact';
+import { parse, unparse } from "papaparse";
+import { toast } from "sonner";
+import { Artifact } from "@/components/chat/create-artifact";
 import {
   CopyIcon,
   LineChartIcon,
   RedoIcon,
   SparklesIcon,
   UndoIcon,
-} from '@/components/icons';
-import { SpreadsheetEditor } from '@/components/sheet-editor';
-import { parse, unparse } from 'papaparse';
-import { toast } from 'sonner';
+} from "@/components/chat/icons";
+import { SpreadsheetEditor } from "@/components/chat/sheet-editor";
 
-type Metadata = any;
+type Metadata = Record<string, never>;
 
-export const sheetArtifact = new Artifact<'sheet', Metadata>({
-  kind: 'sheet',
-  description: 'Useful for working with spreadsheets',
-  initialize: async () => {},
-  onStreamPart: ({ setArtifact, streamPart }) => {
-    if (streamPart.type === 'data-sheetDelta') {
-      setArtifact((draftArtifact) => ({
-        ...draftArtifact,
-        content: streamPart.data,
-        isVisible: true,
-        status: 'streaming',
-      }));
-    }
-  },
-  content: ({
-    content,
-    currentVersionIndex,
-    isCurrentVersion,
-    onSaveContent,
-    status,
-  }) => {
-    return (
-      <SpreadsheetEditor
-        content={content}
-        currentVersionIndex={currentVersionIndex}
-        isCurrentVersion={isCurrentVersion}
-        saveContent={onSaveContent}
-        status={status}
-      />
-    );
-  },
+export const sheetArtifact = new Artifact<"sheet", Metadata>({
   actions: [
     {
+      description: "View Previous version",
       icon: <UndoIcon size={18} />,
-      description: 'View Previous version',
-      onClick: ({ handleVersionChange }) => {
-        handleVersionChange('prev');
-      },
       isDisabled: ({ currentVersionIndex }) => {
         if (currentVersionIndex === 0) {
           return true;
@@ -57,13 +24,13 @@ export const sheetArtifact = new Artifact<'sheet', Metadata>({
 
         return false;
       },
+      onClick: ({ handleVersionChange }) => {
+        handleVersionChange("prev");
+      },
     },
     {
+      description: "View Next version",
       icon: <RedoIcon size={18} />,
-      description: 'View Next version',
-      onClick: ({ handleVersionChange }) => {
-        handleVersionChange('next');
-      },
       isDisabled: ({ isCurrentVersion }) => {
         if (isCurrentVersion) {
           return true;
@@ -71,49 +38,74 @@ export const sheetArtifact = new Artifact<'sheet', Metadata>({
 
         return false;
       },
+      onClick: ({ handleVersionChange }) => {
+        handleVersionChange("next");
+      },
     },
     {
+      description: "Copy as .csv",
       icon: <CopyIcon />,
-      description: 'Copy as .csv',
       onClick: ({ content }) => {
         const parsed = parse<string[]>(content, { skipEmptyLines: true });
 
         const nonEmptyRows = parsed.data.filter((row) =>
-          row.some((cell) => cell.trim() !== ''),
+          row.some((cell) => cell.trim() !== "")
         );
 
         const cleanedCsv = unparse(nonEmptyRows);
 
         navigator.clipboard.writeText(cleanedCsv);
-        toast.success('Copied csv to clipboard!');
+        toast.success("Copied csv to clipboard!");
       },
     },
   ],
+  content: ({ content, currentVersionIndex, onSaveContent, status }) => (
+    <SpreadsheetEditor
+      content={content}
+      currentVersionIndex={currentVersionIndex}
+      isCurrentVersion={true}
+      saveContent={onSaveContent}
+      status={status}
+    />
+  ),
+  description: "Useful for working with spreadsheets",
+  initialize: () => null,
+  kind: "sheet",
+  onStreamPart: ({ setArtifact, streamPart }) => {
+    if (streamPart.type === "data-sheetDelta") {
+      setArtifact((draftArtifact) => ({
+        ...draftArtifact,
+        content: streamPart.data,
+        isVisible: true,
+        status: "streaming",
+      }));
+    }
+  },
   toolbar: [
     {
-      description: 'Format and clean data',
+      description: "Format and clean data",
       icon: <SparklesIcon />,
       onClick: ({ sendMessage }) => {
         sendMessage({
-          role: 'user',
           parts: [
-            { type: 'text', text: 'Can you please format and clean the data?' },
+            { text: "Can you please format and clean the data?", type: "text" },
           ],
+          role: "user",
         });
       },
     },
     {
-      description: 'Analyze and visualize data',
+      description: "Analyze and visualize data",
       icon: <LineChartIcon />,
       onClick: ({ sendMessage }) => {
         sendMessage({
-          role: 'user',
           parts: [
             {
-              type: 'text',
-              text: 'Can you please analyze and visualize the data by creating a new code artifact in python?',
+              text: "Can you please analyze and visualize the data by creating a new code artifact in python?",
+              type: "text",
             },
           ],
+          role: "user",
         });
       },
     },
